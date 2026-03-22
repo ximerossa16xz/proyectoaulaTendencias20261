@@ -61,19 +61,34 @@ python manage.py runserver
 6. Acceder a la aplicación:
 
 ```
-http://127.0.0.1:8000/
+http://127.0.0.1:8000/admin
 ```
 
 ---
 
 ## Autenticación
 
-El sistema utiliza autenticación por sesión de Django.
+El sistema utiliza **TokenAuthentication** y **SessionAuthentication**, permitiendo acceso tanto desde Postman como desde el navegador.
 
-Ruta de acceso:
+### En el Navegador (SessionAuthentication):
 
+Accede a:
 ```
 http://127.0.0.1:8000/api-auth/login/
+```
+
+Verás una interfaz HTML amigable donde puedes ingresar tus credenciales. La sesión se mantiene automáticamente.
+
+### En Postman (TokenAuthentication):
+
+Realiza una petición POST a:
+```
+http://127.0.0.1:8000/api/accounts/login/
+```
+
+Envía tus credenciales y obtendrás un token. Luego incluye el token en el header:
+```
+Authorization: Token <tu_token>
 ```
 
 ---
@@ -94,8 +109,6 @@ http://127.0.0.1:8000/api-auth/login/
 * GET `/api/categories/`
 * POST `/api/categories/`
 * GET `/api/categories/{id}/`
-* PUT/PATCH `/api/categories/{id}/`
-* DELETE `/api/categories/{id}/`
 
 ---
 
@@ -104,8 +117,6 @@ http://127.0.0.1:8000/api-auth/login/
 * GET `/api/suppliers/`
 * POST `/api/suppliers/`
 * GET `/api/suppliers/{id}/`
-* PUT/PATCH `/api/suppliers/{id}/`
-* DELETE `/api/suppliers/{id}/`
 
 ---
 
@@ -114,49 +125,181 @@ http://127.0.0.1:8000/api-auth/login/
 * GET `/api/products/`
 * POST `/api/products/`
 * GET `/api/products/{id}/`
-* PUT/PATCH `/api/products/{id}/`
-* DELETE `/api/products/{id}/`
 
 ---
 
 ## Ejemplos de uso
 
-### Crear categoría
+### Login en Postman (Token Authentication)
 
-```json
-{
-  "name": "Electrónica",
-  "description": "Productos tecnológicos",
-  "status": "active"
-}
-```
+* POST http://127.0.0.1:8000/api/accounts/login/
+* Headers: 
+    Content-Type: application/json
+* Body: 
+    raw JSON
+    {
+      "username": "tu_usuario",
+      "password": "tu_contraseña"
+    }
 
-### Crear proveedor
+* Respuesta esperada:
+  {
+    "token": "9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b",
+    "user": {
+      "id": 1,
+      "username": "admin",
+      "email": "admin@example.com",
+      "role": "admin",
+      "is_staff": true
+    }
+  }
 
-```json
-{
-  "name": "Proveedor Central",
-  "nit": "900123456",
-  "contact": "Juan Pérez",
-  "email": "proveedor@email.com",
-  "phone": "3001234567"
-}
-```
+### Login en Navegador (Session Authentication)
 
-### Crear producto
+Para loguearse en el navegador:
 
-```json
-{
-  "name": "Teclado",
-  "sku": "TEC-001",
-  "category": 1,
-  "supplier": 1,
-  "unit_measure": "unidad",
-  "cost_price": "100000.00",
-  "sale_price": "150000.00",
-  "stock": 10,
-  "minimum_stock": 2
-}
+1. Accede a: `http://127.0.0.1:8000/api-auth/login/`
+2. Ingresa tus credenciales en la interfaz HTML
+3. Haz clic en "Log in"
+4. La sesión se mantiene automáticamente en las peticiones posteriores
+
+Para cerrar sesión:
+
+1. Haz clic en el botón "Log out" en la parte superior
+2. Serás redirigido automáticamente a la página de login
+
+### Dashboard - Ver información y permisos del usuario:
+
+* GET http://127.0.0.1:8000/api/accounts/dashboard/
+* Headers: 
+    Content-Type: application/json
+* Body: 
+    raw JSON
+    {
+      "username": "tu_usuario",
+      "password": "tu_contraseña"
+    }
+
+* Respuesta esperada:
+  {
+    "usuario": {
+      "perfil": "/api/accounts/profile/",
+      "username": "admin",
+      "email": "admin@example.com",
+      "rol": "admin",
+      "es_staff": true
+    },
+    "endpoints_disponibles": {...},
+    "permisos": {...}
+  }
+
+### Listar Categorías (Debe estar logueado):
+
+* GET http://127.0.0.1:8000/api/categories/
+* Headers: 
+    Content-Type: application/json
+    Authorization: Token 9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b
+
+* Respuesta esperada:
+  [
+      {
+          "id": CategoryId,
+          "name": "CategoryName",
+          "description": "CategoryDescription",
+          "status": "active"
+      }
+  ]
+
+### Crear Categorías (solo admin):
+
+* POST http://127.0.0.1:8000/api/categories/
+* Headers: 
+    Content-Type: application/json
+		Authorization: Token 9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b
+* Body: 
+    raw JSON
+    {
+      "name": "Electrónica",
+      "description": "Productos electrónicos en general",
+      "status": "active"
+    }
+
+### Listar Proovedores (Debe estar logueado):
+
+* GET http://127.0.0.1:8000/api/suppliers/
+* Headers: 
+    Content-Type: application/json
+		Authorization: Token 9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b
+* Respuesta esperada:
+  [
+      {
+          "id": SupplierId,
+          "name": "SupplierTradeName",
+          "nit": "SupplierNit",
+          "contact": "SupplierName",
+          "email": "SupplierEmail",
+          "phone": "SupplierPhone"
+      }
+  ]
+
+### Crear Proovedores (solo admin):
+
+* POST http://127.0.0.1:8000/api/suppliers/
+* Headers: 
+    Content-Type: application/json
+    Authorization: Token 9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b
+* Body: 
+    raw JSON
+    {
+      "name": "Distribuidora XYZ",
+      "nit": "123456789",
+      "contact": "Juan Pérez",
+      "email": "contacto@xyz.com",
+      "phone": "3001234567"
+    }
+
+
+### Listar Productos (Debe estar logueado):
+
+* GET http://127.0.0.1:8000/api/products/
+* Headers: 
+    Content-Type: application/json
+		Authorization: Token 9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b
+
+* Respuesta esperada:
+  [
+      {
+          "id": ProductId,
+          "name": "ProductName",
+          "sku": "ProductSKU",
+          "unit_measure": "ProductUnitMeasure",
+          "cost_price": "ProductCostPrice",
+          "sale_price": "ProductSalePrice",
+          "stock": ProductStock,
+          "minimum_stock": ProductMinimumStock,
+          "category": CategoryId,
+          "supplier": SupplierId
+      }
+  ]
+
+### Crear Productos (solo admin):
+* POST http://127.0.0.1:8000/api/products/
+* Headers: 
+    Content-Type: application/json
+    Authorization: Token 9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b
+* Body: 
+    raw JSON
+    {
+      "name": "Laptop Dell",
+      "sku": "DELL-001",
+      "category": 1,
+      "supplier": 2,
+      "unit_measure": "unidad",
+      "cost_price": "800.00",
+      "sale_price": "1200.00",
+      "stock": 50,
+      "minimum_stock": 10
+    }
 ```
 
 ---
@@ -173,7 +316,7 @@ http://127.0.0.1:8000/api-auth/login/
 
 Se implementaron permisos personalizados que permiten:
 
-* Restringir el acceso a usuarios no autenticados.
+* Restringir la creación a usuarios no autenticados.
 * Limitar a los operadores a operaciones de consulta.
 * Permitir a los administradores el acceso completo al sistema.
 
