@@ -20,10 +20,7 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_view(request):
-    """
-    Login endpoint que devuelve un token.
-    Body: {"username": "usuario", "password": "contraseña"}
-    """
+
     username = request.data.get('username')
     password = request.data.get('password')
     
@@ -50,9 +47,7 @@ def login_view(request):
 
 @api_view(['GET', 'POST'])
 def logout_view(request):
-    """
-    Logout endpoint que cierra la sesión y redirecciona al login
-    """
+
     logout(request)
     return HttpResponseRedirect(reverse('rest_framework:login'))
 
