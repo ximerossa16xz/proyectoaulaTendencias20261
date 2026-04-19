@@ -34,3 +34,4 @@ htmlcov/
 # OS files
 .DS_Store
 Thumbs.db
+inventary/inventory_app/migrations/0003_restockorder.py
