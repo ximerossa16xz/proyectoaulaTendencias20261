@@ -125,6 +125,8 @@ Authorization: Token <tu_token>
 * GET `/api/products/`
 * POST `/api/products/`
 * GET `/api/products/{id}/`
+* PATCH `/api/products/{id}/update-stock/` (Actualizar stock)
+* GET `/api/products/alerts/low-stock/` (Alertas de stock mínimo)
 
 ---
 
@@ -300,6 +302,59 @@ Para cerrar sesión:
       "stock": 50,
       "minimum_stock": 10
     }
+
+### Alertas de Stock Mínimo (Debe estar logueado):
+
+* GET http://127.0.0.1:8000/api/products/alerts/low-stock/
+* Headers: 
+    Content-Type: application/json
+    Authorization: Token 9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b
+
+* Respuesta esperada:
+  [
+      {
+          "id": ProductId,
+          "name": "ProductName",
+          "sku": "ProductSKU",
+          "unit_measure": "ProductUnitMeasure",
+          "cost_price": "ProductCostPrice",
+          "sale_price": "ProductSalePrice",
+          "stock": ProductStock,
+          "minimum_stock": ProductMinimumStock,
+          "category": CategoryId,
+          "supplier": SupplierId
+      }
+  ]
+
+**Nota:** Este endpoint retorna todos los productos cuyo stock actual está por debajo del stock mínimo configurado, útil para generar alertas de reabastecimiento.
+
+### Actualizar Stock de Producto (solo admin):
+
+* PATCH http://127.0.0.1:8000/api/products/{id}/update-stock/
+* Headers: 
+    Content-Type: application/json
+    Authorization: Token 9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b
+* Body: 
+    raw JSON
+    {
+      "stock": 100
+    }
+
+* Respuesta esperada:
+  {
+      "id": ProductId,
+      "name": "ProductName",
+      "sku": "ProductSKU",
+      "unit_measure": "ProductUnitMeasure",
+      "cost_price": "ProductCostPrice",
+      "sale_price": "ProductSalePrice",
+      "stock": 100,
+      "minimum_stock": ProductMinimumStock,
+      "category": CategoryId,
+      "supplier": SupplierId
+  }
+
+**Nota:** Este endpoint permite actualizar únicamente el stock de un producto. Solo los administradores pueden realizar esta operación.
 ```
 
 ---

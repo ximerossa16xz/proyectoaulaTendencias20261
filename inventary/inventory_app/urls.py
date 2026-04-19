@@ -3,7 +3,8 @@ from .views import (
     CategoryListCreateView, CategoryDetailView,
     SupplierListCreateView, SupplierDetailView,
     ProductListCreateView, ProductDetailView,
-    RestockOrderListCreateView, RestockOrderDetailView
+    RestockOrderListCreateView, RestockOrderDetailView,
+    LowStockAlertView, UpdateProductStockView
 )
 
 urlpatterns = [
@@ -18,4 +19,6 @@ urlpatterns = [
 
     path('restock-orders/', RestockOrderListCreateView.as_view(), name='restock-list-create'),
     path('restock-orders/<int:pk>/', RestockOrderDetailView.as_view(), name='restock-detail'),
+    path('products/<int:pk>/update-stock/', UpdateProductStockView.as_view(), name='update-stock'),
+    path('products/alerts/low-stock/', LowStockAlertView.as_view(), name='low-stock-alert'),
 ]
