@@ -1,8 +1,8 @@
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from .permissions import IsAdminOrReadOnly
-from .models import Category, Supplier, Product
-from .serializers import CategorySerializer, SupplierSerializer, ProductSerializer
+from .models import Category, Supplier, Product, RestockOrder
+from .serializers import CategorySerializer, SupplierSerializer, ProductSerializer, RestockOrderSerializer
 
 
 class CategoryListCreateView(generics.ListCreateAPIView):
@@ -38,4 +38,20 @@ class ProductListCreateView(generics.ListCreateAPIView):
 class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
+
+
+class RestockOrderListCreateView(generics.ListCreateAPIView):
+    queryset = RestockOrder.objects.all()
+    serializer_class = RestockOrderSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
+
+    def perform_create(self, serializer):
+        # Assign the current user as created_by
+        serializer.save(created_by=self.request.user)
+
+
+class RestockOrderDetailView(generics.RetrieveUpdateAPIView):
+    queryset = RestockOrder.objects.all()
+    serializer_class = RestockOrderSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
