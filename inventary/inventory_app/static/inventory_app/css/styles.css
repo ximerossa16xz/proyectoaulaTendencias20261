@@ -23,6 +23,27 @@ border-radius:18px;
 box-shadow:0 10px 25px rgba(0,0,0,.25);
 }
 
+.card .table{
+--bs-table-bg: transparent;
+--bs-table-striped-bg: rgba(255,255,255,.04);
+--bs-table-hover-bg: rgba(56,189,248,.10);
+--bs-table-color: #e2e8f0;
+--bs-table-striped-color: #e2e8f0;
+--bs-table-hover-color: #f8fafc;
+color:#e2e8f0;
+margin-bottom:0;
+}
+
+.card .table > :not(caption) > * > *{
+background-color:transparent;
+border-bottom-color:rgba(148,163,184,.35);
+}
+
+.card .table thead th{
+color:#f8fafc;
+font-weight:600;
+}
+
 .stats-number{
 font-size:2.5rem;
 font-weight:700;
@@ -66,4 +87,37 @@ border-radius:12px;
 
 .btn-login:hover{
 background:#db2777;
+}
+
+/* Improve modal contrast over dark app background */
+.modal-content{
+background:#f8fafc;
+color:#0f172a;
+border:none;
+border-radius:16px;
+box-shadow:0 16px 40px rgba(2,6,23,.35);
+}
+
+.modal-header,
+.modal-footer{
+border-color:#e2e8f0;
+}
+
+.modal-title,
+.modal .form-label,
+.modal .form-text,
+.modal p,
+.modal strong{
+color:#0f172a;
+}
+
+.modal .form-control{
+background:#ffffff;
+color:#0f172a;
+border:1px solid #cbd5e1;
+}
+
+.modal .form-control:focus{
+border-color:#38bdf8;
+box-shadow:0 0 0 .2rem rgba(56,189,248,.2);
 }

@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <td><span class="badge ${cat.status === 'active' ? 'bg-success' : 'bg-secondary'}">${cat.status}</span></td>
                 <td>${cat.product_count || 'N/A'}</td>
                 <td>
-                    <a href="/api/categories/${cat.id}/" class="btn btn-sm btn-outline-primary" target="_blank">Ver API</a>
+                    <a href="/api/inventory/categories/${cat.id}/" class="btn btn-sm btn-outline-primary" target="_blank">Ver API</a>
                 </td>
             `;
         });
