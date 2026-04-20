@@ -4,7 +4,14 @@
 {% block title %}Proveedores - Inventario{% endblock %}
 
 {% block content %}
-<h2>Proveedores</h2>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Proveedores</h2>
+    {% if request.user.role == 'admin' or request.user.is_superuser %}
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#supplierModal" id="new-supplier-btn">
+        Nuevo proveedor
+    </button>
+    {% endif %}
+</div>
 
 <div class="card">
     <div class="card-header">
@@ -28,39 +35,271 @@
                 </tbody>
             </table>
         </div>
+        <div id="suppliers-empty" class="p-4 text-center text-muted" style="display: none;">
+            No hay proveedores registrados.
+        </div>
     </div>
 </div>
+
+{% if request.user.role == 'admin' or request.user.is_superuser %}
+<div class="modal fade" id="supplierModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="supplier-form">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="supplier-modal-title">Nuevo proveedor</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="supplier-id">
+
+                    <div class="mb-3">
+                        <label for="supplier-name" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="supplier-name" required maxlength="120">
+                    </div>
+                    <div class="mb-3">
+                        <label for="supplier-nit" class="form-label">NIT</label>
+                        <input type="text" class="form-control" id="supplier-nit" required maxlength="20">
+                    </div>
+                    <div class="mb-3">
+                        <label for="supplier-contact" class="form-label">Contacto</label>
+                        <input type="text" class="form-control" id="supplier-contact" required maxlength="120">
+                    </div>
+                    <div class="mb-3">
+                        <label for="supplier-email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="supplier-email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="supplier-phone" class="form-label">Teléfono</label>
+                        <input type="text" class="form-control" id="supplier-phone" required maxlength="20">
+                    </div>
+                    <div id="supplier-form-error" class="alert alert-danger d-none mb-0"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="supplier-submit-btn">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteSupplierModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Eliminar proveedor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">¿Seguro que quieres eliminar a <strong id="delete-supplier-name"></strong>?</p>
+                <input type="hidden" id="delete-supplier-id">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirm-delete-btn">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', async function() {
+const isAdmin = "{{ request.user.role }}" === 'admin';
+const isSuperuser = "{{ request.user.is_superuser|yesno:'true,false' }}" === 'true';
+const canManageSuppliers = isAdmin || isSuperuser;
+let suppliers = [];
+
+let supplierModal = null;
+let deleteSupplierModal = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (canManageSuppliers) {
+        supplierModal = new bootstrap.Modal(document.getElementById('supplierModal'));
+        deleteSupplierModal = new bootstrap.Modal(document.getElementById('deleteSupplierModal'));
+        bindAdminEvents();
+    }
+    loadSuppliers();
+});
+
+async function loadSuppliers() {
     try {
         const data = await InventoryApp.fetchAPI('suppliers/');
-        
-        const tbody = document.getElementById('suppliers-table-body');
-        const container = document.getElementById('suppliers-container');
-        const loading = document.getElementById('suppliers-loading');
-        
-        (data.results || []).forEach(supplier => {
-            const row = tbody.insertRow();
-            row.innerHTML = `
-                <td><strong>${supplier.name}</strong></td>
-                <td><code>${supplier.nit}</code></td>
-                <td>${supplier.contact}</td>
-                <td><a href="mailto:${supplier.email}">${supplier.email}</a></td>
-                <td><a href="tel:${supplier.phone}">${supplier.phone}</a></td>
-                <td>
-                    <a href="/api/suppliers/${supplier.id}/" class="btn btn-sm btn-outline-primary" target="_blank">Ver API</a>
-                </td>
-            `;
-        });
-        
-        loading.style.display = 'none';
-        container.style.display = 'block';
+        suppliers = data.results || data || [];
+        renderSuppliers();
     } catch (error) {
+        document.getElementById('suppliers-loading').style.display = 'none';
         InventoryApp.showAlert('Error cargando proveedores.', 'danger');
     }
-});
+}
+
+function renderSuppliers() {
+    const tbody = document.getElementById('suppliers-table-body');
+    const container = document.getElementById('suppliers-container');
+    const loading = document.getElementById('suppliers-loading');
+    const empty = document.getElementById('suppliers-empty');
+
+    tbody.innerHTML = '';
+    loading.style.display = 'none';
+
+    if (!suppliers.length) {
+        container.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+    }
+
+    empty.style.display = 'none';
+    container.style.display = 'block';
+
+    suppliers.forEach((supplier) => {
+        const row = tbody.insertRow();
+        const actions = canManageSuppliers
+            ? `<div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="openEditSupplier(${supplier.id})">Editar</button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="openDeleteSupplier(${supplier.id})">Eliminar</button>
+                    <a href="/api/inventory/suppliers/${supplier.id}/" class="btn btn-sm btn-outline-primary" target="_blank">Ver API</a>
+               </div>`
+            : `<a href="/api/inventory/suppliers/${supplier.id}/" class="btn btn-sm btn-outline-primary" target="_blank">Ver API</a>`;
+
+        row.innerHTML = `
+            <td><strong>${escapeHtml(supplier.name)}</strong></td>
+            <td><code>${escapeHtml(supplier.nit)}</code></td>
+            <td>${escapeHtml(supplier.contact)}</td>
+            <td><a href="mailto:${escapeHtml(supplier.email)}">${escapeHtml(supplier.email)}</a></td>
+            <td><a href="tel:${escapeHtml(supplier.phone)}">${escapeHtml(supplier.phone)}</a></td>
+            <td>${actions}</td>
+        `;
+    });
+}
+
+function bindAdminEvents() {
+    document.getElementById('new-supplier-btn').addEventListener('click', openCreateSupplier);
+    document.getElementById('supplier-form').addEventListener('submit', submitSupplierForm);
+    document.getElementById('confirm-delete-btn').addEventListener('click', deleteSupplier);
+}
+
+function openCreateSupplier() {
+    document.getElementById('supplier-modal-title').textContent = 'Nuevo proveedor';
+    document.getElementById('supplier-submit-btn').textContent = 'Guardar';
+    document.getElementById('supplier-id').value = '';
+    document.getElementById('supplier-form').reset();
+    hideFormError();
+}
+
+function openEditSupplier(id) {
+    const supplier = suppliers.find((s) => s.id === id);
+    if (!supplier) {
+        InventoryApp.showAlert('Proveedor no encontrado.', 'warning');
+        return;
+    }
+
+    document.getElementById('supplier-modal-title').textContent = 'Editar proveedor';
+    document.getElementById('supplier-submit-btn').textContent = 'Actualizar';
+    document.getElementById('supplier-id').value = supplier.id;
+    document.getElementById('supplier-name').value = supplier.name || '';
+    document.getElementById('supplier-nit').value = supplier.nit || '';
+    document.getElementById('supplier-contact').value = supplier.contact || '';
+    document.getElementById('supplier-email').value = supplier.email || '';
+    document.getElementById('supplier-phone').value = supplier.phone || '';
+    hideFormError();
+
+    supplierModal.show();
+}
+
+function openDeleteSupplier(id) {
+    const supplier = suppliers.find((s) => s.id === id);
+    if (!supplier) {
+        InventoryApp.showAlert('Proveedor no encontrado.', 'warning');
+        return;
+    }
+
+    document.getElementById('delete-supplier-id').value = supplier.id;
+    document.getElementById('delete-supplier-name').textContent = supplier.name;
+    deleteSupplierModal.show();
+}
+
+async function submitSupplierForm(event) {
+    event.preventDefault();
+
+    const submitBtn = document.getElementById('supplier-submit-btn');
+    const supplierId = document.getElementById('supplier-id').value;
+
+    const payload = {
+        name: document.getElementById('supplier-name').value.trim(),
+        nit: document.getElementById('supplier-nit').value.trim(),
+        contact: document.getElementById('supplier-contact').value.trim(),
+        email: document.getElementById('supplier-email').value.trim(),
+        phone: document.getElementById('supplier-phone').value.trim()
+    };
+
+    submitBtn.disabled = true;
+    hideFormError();
+
+    try {
+        if (supplierId) {
+            await InventoryApp.fetchAPI(`suppliers/${supplierId}/`, {
+                method: 'PUT',
+                body: JSON.stringify(payload)
+            });
+            InventoryApp.showAlert('Proveedor actualizado correctamente.', 'success');
+        } else {
+            await InventoryApp.fetchAPI('suppliers/', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+            InventoryApp.showAlert('Proveedor creado correctamente.', 'success');
+        }
+
+        supplierModal.hide();
+        await loadSuppliers();
+    } catch (error) {
+        showFormError('No se pudo guardar el proveedor. Verifica los datos e intenta nuevamente.');
+    } finally {
+        submitBtn.disabled = false;
+    }
+}
+
+async function deleteSupplier() {
+    const supplierId = document.getElementById('delete-supplier-id').value;
+    const deleteBtn = document.getElementById('confirm-delete-btn');
+    deleteBtn.disabled = true;
+
+    try {
+        await InventoryApp.fetchAPI(`suppliers/${supplierId}/`, {
+            method: 'DELETE'
+        });
+        deleteSupplierModal.hide();
+        InventoryApp.showAlert('Proveedor eliminado correctamente.', 'success');
+        await loadSuppliers();
+    } catch (error) {
+        InventoryApp.showAlert('No se pudo eliminar el proveedor.', 'danger');
+    } finally {
+        deleteBtn.disabled = false;
+    }
+}
+
+function showFormError(message) {
+    const errorEl = document.getElementById('supplier-form-error');
+    errorEl.textContent = message;
+    errorEl.classList.remove('d-none');
+}
+
+function hideFormError() {
+    const errorEl = document.getElementById('supplier-form-error');
+    errorEl.textContent = '';
+    errorEl.classList.add('d-none');
+}
+
+function escapeHtml(value) {
+    const text = value == null ? '' : String(value);
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 </script>
 {% endblock %}

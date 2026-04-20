@@ -1,22 +1,37 @@
 // Shared API utilities for inventory app
-const API_BASE = '/api/';
+const API_BASE = '/api/inventory/';
 
 async function fetchAPI(endpoint, options = {}) {
     try {
+        const method = (options.method || 'GET').toUpperCase();
+        const headers = {
+            'Content-Type': 'application/json',
+            ...options.headers
+        };
+
+        if (!['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method)) {
+            headers['X-CSRFToken'] = getCookie('csrftoken');
+        }
+
         const response = await fetch(API_BASE + endpoint, {
-            headers: {
-                'Content-Type': 'application/json',
-                // Add 'X-CSRFToken': getCookie('csrftoken') if needed for POST
-                ...options.headers
-            },
+            headers,
             ...options
         });
         
         if (!response.ok) {
             throw new Error(`API Error: ${response.status}`);
         }
-        
-        return await response.json();
+
+        if (response.status === 204) {
+            return null;
+        }
+
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            return await response.json();
+        }
+
+        return await response.text();
     } catch (error) {
         console.error('Fetch error:', error);
         showAlert(`Error loading data: ${error.message}`, 'danger');
