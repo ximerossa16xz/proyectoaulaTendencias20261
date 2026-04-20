@@ -1,0 +1,147 @@
+{% extends 'inventory_app/base.html' %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">Dashboard General</h2>
+        <p class="text-light opacity-75 mb-0">
+            Bienvenido {{ user.username }}
+        </p>
+    </div>
+
+    <div>
+        {% if user.is_staff %}
+            <span class="badge bg-pink px-3 py-2">Administrador</span>
+        {% else %}
+            <span class="badge bg-info px-3 py-2">Usuario</span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4">
+
+    <div class="col-md-3">
+        <div class="card p-4 text-center h-100">
+            <h6 class="mb-2">Total Productos</h6>
+            <div class="stats-number">128</div>
+            <small class="text-light opacity-75">Inventario actual</small>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-4 text-center h-100">
+            <h6 class="mb-2">Categorías</h6>
+            <div class="stats-number">12</div>
+            <small class="text-light opacity-75">Activas</small>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-4 text-center h-100">
+            <h6 class="mb-2">Stock Bajo</h6>
+            <div class="stats-number text-warning">8</div>
+            <small class="text-light opacity-75">Requieren atención</small>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-4 text-center h-100">
+            <h6 class="mb-2">
+                {% if user.is_staff %}
+                    Usuarios
+                {% else %}
+                    Mis Productos
+                {% endif %}
+            </h6>
+
+            <div class="stats-number">
+                {% if user.is_staff %}
+                    20
+                {% else %}
+                    5
+                {% endif %}
+            </div>
+
+            <small class="text-light opacity-75">
+                {% if user.is_staff %}
+                    Registrados
+                {% else %}
+                    Asignados
+                {% endif %}
+            </small>
+        </div>
+    </div>
+
+</div>
+
+<div class="row g-4 mt-1">
+
+    <div class="col-lg-8">
+        <div class="card p-4 h-100">
+            <h5 class="mb-3">Resumen del Sistema</h5>
+
+            {% if user.is_staff %}
+                <p class="mb-2">Tienes acceso total al panel administrativo.</p>
+                <ul class="mb-0">
+                    <li>Gestionar productos</li>
+                    <li>Editar categorías</li>
+                    <li>Administrar proveedores</li>
+                    <li>Controlar stock</li>
+                </ul>
+            {% else %}
+                <p class="mb-2">Tu cuenta tiene acceso estándar.</p>
+                <ul class="mb-0">
+                    <li>Consultar productos</li>
+                    <li>Revisar inventario</li>
+                    <li>Visualizar categorías</li>
+                </ul>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card p-4 h-100">
+            <h5 class="mb-3">Estado</h5>
+
+            <div class="mb-3">
+                <small class="text-light opacity-75">Sesión activa</small>
+                <div class="fw-semibold">Sí</div>
+            </div>
+
+            <div class="mb-3">
+                <small class="text-light opacity-75">Usuario</small>
+                <div class="fw-semibold">{{ user.username }}</div>
+            </div>
+
+            <div>
+                <small class="text-light opacity-75">Rol</small>
+                <div class="fw-semibold">
+                    {% if user.is_staff %}
+                        Administrador
+                    {% else %}
+                        Usuario
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<div class="card mt-4 p-4">
+    <h5 class="mb-2">Bienvenida</h5>
+
+    {% if user.is_staff %}
+        <p class="mb-0">
+            Desde este panel puedes administrar completamente el sistema de inventario.
+        </p>
+    {% else %}
+        <p class="mb-0">
+            Bienvenido al sistema. Aquí podrás consultar la información disponible.
+        </p>
+    {% endif %}
+</div>
+{% endblock %}

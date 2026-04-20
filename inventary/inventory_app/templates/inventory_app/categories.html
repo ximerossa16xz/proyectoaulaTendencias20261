@@ -1,0 +1,83 @@
+{% extends 'inventory_app/base.html' %}
+{% load static %}
+
+{% block title %}Categorías - Inventario{% endblock %}
+
+{% block content %}
+<h2>Categorías</h2>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h6>Estadísticas</h6>
+                <p>Total: <span id="total-categories">0</span></p>
+                <p>Activas: <span id="active-count">0</span></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Lista de Categorías</h5>
+    </div>
+    <div class="card-body p-0">
+        <div id="categories-loading" class="loading p-4">Cargando categorías...</div>
+        <div id="categories-container" class="table-responsive" style="display: none;">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Descripción</th>
+                        <th>Estado</th>
+                        <th>Productos</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="categories-table-body">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        const [allCats, activeCats] = await Promise.all([
+            InventoryApp.fetchAPI('categories/'),
+            InventoryApp.fetchAPI('categories/?status=active')
+        ]);
+
+        document.getElementById('total-categories').textContent = allCats.count || 0;
+        document.getElementById('active-count').textContent = activeCats.count || 0;
+
+        const tbody = document.getElementById('categories-table-body');
+        const container = document.getElementById('categories-container');
+        const loading = document.getElementById('categories-loading');
+        
+        (allCats.results || []).forEach(cat => {
+            const row = tbody.insertRow();
+            row.className = cat.status === 'active' ? 'table-success' : 'table-secondary';
+            row.innerHTML = `
+                <td><strong>${cat.name}</strong></td>
+                <td>${cat.description.substring(0, 50)}${cat.description.length > 50 ? '...' : ''}</td>
+                <td><span class="badge ${cat.status === 'active' ? 'bg-success' : 'bg-secondary'}">${cat.status}</span></td>
+                <td>${cat.product_count || 'N/A'}</td>
+                <td>
+                    <a href="/api/categories/${cat.id}/" class="btn btn-sm btn-outline-primary" target="_blank">Ver API</a>
+                </td>
+            `;
+        });
+        
+        loading.style.display = 'none';
+        container.style.display = 'block';
+    } catch (error) {
+        InventoryApp.showAlert('Error cargando categorías.', 'danger');
+    }
+});
+</script>
+{% endblock %}

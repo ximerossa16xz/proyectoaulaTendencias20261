@@ -5,8 +5,36 @@ from django.db import models
 from .permissions import IsAdminOrReadOnly
 from .models import Category, Supplier, Product, RestockOrder
 from .serializers import CategorySerializer, SupplierSerializer, ProductSerializer, RestockOrderSerializer
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
 
+@login_required
+def dashboard_view(request):
+    return render(request, 'inventory_app/index.html')
 
+@login_required
+def movements_view(request):
+    return render(request, 'inventory_app/movements.html')
+
+@login_required
+def restock_view(request):
+    return render(request, 'inventory_app/restock.html')
+
+@login_required
+def products_view(request):
+    return render(request, 'inventory_app/products.html')
+
+@login_required
+def categories_view(request):
+    return render(request, 'inventory_app/categories.html')
+
+@login_required
+def suppliers_view(request):
+    return render(request, 'inventory_app/suppliers.html')
+
+@login_required
+def alerts_view(request):
+    return render(request, 'inventory_app/alerts.html')
 class CategoryListCreateView(generics.ListCreateAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer

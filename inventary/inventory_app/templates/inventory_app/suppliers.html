@@ -1,0 +1,66 @@
+{% extends 'inventory_app/base.html' %}
+{% load static %}
+
+{% block title %}Proveedores - Inventario{% endblock %}
+
+{% block content %}
+<h2>Proveedores</h2>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Lista de Proveedores</h5>
+    </div>
+    <div class="card-body p-0">
+        <div id="suppliers-loading" class="loading p-4">Cargando proveedores...</div>
+        <div id="suppliers-container" class="table-responsive" style="display: none;">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>NIT</th>
+                        <th>Contacto</th>
+                        <th>Email</th>
+                        <th>Teléfono</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="suppliers-table-body">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        const data = await InventoryApp.fetchAPI('suppliers/');
+        
+        const tbody = document.getElementById('suppliers-table-body');
+        const container = document.getElementById('suppliers-container');
+        const loading = document.getElementById('suppliers-loading');
+        
+        (data.results || []).forEach(supplier => {
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td><strong>${supplier.name}</strong></td>
+                <td><code>${supplier.nit}</code></td>
+                <td>${supplier.contact}</td>
+                <td><a href="mailto:${supplier.email}">${supplier.email}</a></td>
+                <td><a href="tel:${supplier.phone}">${supplier.phone}</a></td>
+                <td>
+                    <a href="/api/suppliers/${supplier.id}/" class="btn btn-sm btn-outline-primary" target="_blank">Ver API</a>
+                </td>
+            `;
+        });
+        
+        loading.style.display = 'none';
+        container.style.display = 'block';
+    } catch (error) {
+        InventoryApp.showAlert('Error cargando proveedores.', 'danger');
+    }
+});
+</script>
+{% endblock %}
