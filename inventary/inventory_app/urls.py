@@ -1,17 +1,23 @@
 from django.urls import path
 from .views import (
-    CategoryListCreateView, CategoryDetailView,
-    SupplierListCreateView, SupplierDetailView,
-    ProductListCreateView, ProductDetailView
+    dashboard_view,
+    inventory_view,
+    products_view,
+    categories_view,
+    suppliers_view,
+    movements_view,
+    restock_view,
+    alerts_view
 )
 
 urlpatterns = [
-    path('categories/', CategoryListCreateView.as_view(), name='category-list-create'),
-    path('categories/<int:pk>/', CategoryDetailView.as_view(), name='category-detail'),
+    path('', dashboard_view, name='dashboard'),
+    path('inventory/', inventory_view, name='inventory'),
 
-    path('suppliers/', SupplierListCreateView.as_view(), name='supplier-list-create'),
-    path('suppliers/<int:pk>/', SupplierDetailView.as_view(), name='supplier-detail'),
-
-    path('products/', ProductListCreateView.as_view(), name='product-list-create'),
-    path('products/<int:pk>/', ProductDetailView.as_view(), name='product-detail'),
+    path('inventory/products/', products_view, name='products'),
+    path('inventory/categories/', categories_view, name='categories'),
+    path('inventory/suppliers/', suppliers_view, name='suppliers'),
+    path('inventory/movements/', movements_view, name='movements'),
+    path('inventory/restock/', restock_view, name='restock'),
+    path('inventory/alerts/', alerts_view, name='alerts'),
 ]

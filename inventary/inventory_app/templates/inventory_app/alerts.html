@@ -1,0 +1,88 @@
+{% extends 'inventory_app/base.html' %}
+
+{% block title %}Alertas - Inventario{% endblock %}
+
+{% block content %}
+<h2>Alertas de stock bajo</h2>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Productos por debajo del mínimo</h5>
+    </div>
+    <div class="card-body p-0">
+        <div id="alerts-loading" class="p-4">Cargando alertas...</div>
+        <div id="alerts-error" class="alert alert-danger m-3" style="display: none;"></div>
+        <div id="alerts-container" class="table-responsive" style="display: none;">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>SKU</th>
+                        <th>Stock actual</th>
+                        <th>Stock mínimo</th>
+                        <th>Proveedor</th>
+                    </tr>
+                </thead>
+                <tbody id="alerts-table-body"></tbody>
+            </table>
+        </div>
+        <div id="alerts-empty" class="p-4 text-center text-muted" style="display: none;">
+            No hay alertas activas.
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', loadAlerts);
+
+async function loadAlerts() {
+    const loading = document.getElementById('alerts-loading');
+    const errorBox = document.getElementById('alerts-error');
+    const emptyBox = document.getElementById('alerts-empty');
+    const container = document.getElementById('alerts-container');
+    const tbody = document.getElementById('alerts-table-body');
+
+    try {
+        const payload = await InventoryApp.fetchAPI('products/alerts/low-stock/');
+        const alerts = InventoryApp.getListData(payload);
+        tbody.innerHTML = '';
+
+        if (!alerts.length) {
+            emptyBox.style.display = 'block';
+            return;
+        }
+
+        alerts.forEach((product) => {
+            const row = tbody.insertRow();
+            row.className = 'table-warning';
+            row.innerHTML = `
+                <td>${escapeHtml(product.name)}</td>
+                <td><code>${escapeHtml(product.sku)}</code></td>
+                <td>${product.stock}</td>
+                <td>${product.minimum_stock}</td>
+                <td>${escapeHtml(product.supplier_name || 'N/A')}</td>
+            `;
+        });
+
+        container.style.display = 'block';
+    } catch (error) {
+        errorBox.textContent = error.message;
+        errorBox.style.display = 'block';
+    } finally {
+        loading.style.display = 'none';
+    }
+}
+
+function escapeHtml(value) {
+    const text = value == null ? '' : String(value);
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+</script>
+{% endblock %}
