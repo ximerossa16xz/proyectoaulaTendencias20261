@@ -4,37 +4,44 @@
 {% block title %}Productos - Inventario{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Productos</h2>
-    <div class="search-form">
-        <input type="text" id="search-input" class="form-control" placeholder="Buscar por nombre o SKU...">
+<div class="d-flex justify-content-between align-items-center mb-4 gap-3 flex-wrap">
+    <h2 class="mb-0">Productos</h2>
+    <div class="d-flex gap-2 align-items-center">
+        <div class="search-form">
+            <input type="text" id="search-input" class="form-control" placeholder="Buscar por nombre o SKU...">
+        </div>
+        {% if request.user.role == 'admin' or request.user.is_superuser %}
+        <button type="button" class="btn btn-primary" id="open-product-modal-btn">
+            Agregar producto
+        </button>
+        {% endif %}
     </div>
 </div>
 
 <div class="card">
     <div class="card-header">
-        <h5 class="mb-0">Lista de Productos</h5>
+        <h5 class="mb-0">Lista de productos</h5>
     </div>
     <div class="card-body p-0">
         <div id="products-loading" class="loading p-4">Cargando productos...</div>
+        <div id="products-error" class="alert alert-danger m-3" style="display: none;"></div>
         <div id="products-container" class="table-responsive" style="display: none;">
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
                         <th>Nombre</th>
                         <th>SKU</th>
-                        <th>Categoría</th>
+                        <th>Categoria</th>
                         <th>Proveedor</th>
                         <th>Unidad</th>
                         <th>Stock</th>
-                        <th>Stock Mínimo</th>
+                        <th>Stock minimo</th>
                         <th>Costo</th>
                         <th>Venta</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
-                <tbody id="products-table-body">
-                </tbody>
+                <tbody id="products-table-body"></tbody>
             </table>
         </div>
         <div id="no-results" class="p-4 text-center text-muted" style="display: none;">
@@ -47,36 +54,124 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-body">
-                <h6>Estadísticas</h6>
+                <h6>Estadisticas</h6>
                 <p>Total: <span id="total-products">0</span></p>
-                <p>Stock Bajo: <span id="low-stock-count">0</span></p>
+                <p>Stock bajo: <span id="low-stock-count">0</span></p>
             </div>
         </div>
     </div>
 </div>
+
+{% if request.user.role == 'admin' or request.user.is_superuser %}
+<div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="product-form">
+                <div class="modal-header">
+                    <h5 class="modal-title">Agregar producto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="product-name" class="form-label">Nombre</label>
+                            <input type="text" class="form-control" id="product-name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="product-sku" class="form-label">SKU</label>
+                            <input type="text" class="form-control" id="product-sku" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="product-category" class="form-label">Categoria</label>
+                            <select class="form-select" id="product-category" required>
+                                <option value="">Selecciona una categoria</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="product-supplier" class="form-label">Proveedor</label>
+                            <select class="form-select" id="product-supplier" required>
+                                <option value="">Selecciona un proveedor</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="product-unit-measure" class="form-label">Unidad</label>
+                            <input type="text" class="form-control" id="product-unit-measure" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="product-stock" class="form-label">Stock</label>
+                            <input type="number" min="0" class="form-control" id="product-stock" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="product-minimum-stock" class="form-label">Stock minimo</label>
+                            <input type="number" min="0" class="form-control" id="product-minimum-stock" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="product-cost-price" class="form-label">Costo</label>
+                            <input type="number" min="0" step="0.01" class="form-control" id="product-cost-price" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="product-sale-price" class="form-label">Venta</label>
+                            <input type="number" min="0" step="0.01" class="form-control" id="product-sale-price" required>
+                        </div>
+                    </div>
+                    <div id="product-form-error" class="alert alert-danger mt-3 mb-0 d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="product-submit-btn">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
 <script>
+const canManageProducts = "{{ request.user.role }}" === 'admin' || "{{ request.user.is_superuser|yesno:'true,false' }}" === 'true';
 let allProducts = [];
 let filteredProducts = [];
+let categoriesOptions = [];
+let suppliersOptions = [];
+let productModal = null;
 
-document.addEventListener('DOMContentLoaded', loadProducts);
+document.addEventListener('DOMContentLoaded', async () => {
+    if (canManageProducts) {
+        productModal = new bootstrap.Modal(document.getElementById('productModal'));
+        document.getElementById('open-product-modal-btn').addEventListener('click', openProductModal);
+        document.getElementById('product-form').addEventListener('submit', submitProductForm);
+    }
+
+    await loadProducts();
+});
 
 document.getElementById('search-input')?.addEventListener('input', debounce(filterProducts, 300));
 
 async function loadProducts() {
+    const loading = document.getElementById('products-loading');
+    const errorBox = document.getElementById('products-error');
+
     try {
-        InventoryApp.showLoading(document.getElementById('products-loading'));
+        InventoryApp.showLoading(loading);
+        errorBox.style.display = 'none';
+
         const data = await InventoryApp.fetchAPI('products/');
-        allProducts = data.results || [];
+        allProducts = InventoryApp.getListData(data);
         filteredProducts = [...allProducts];
+
+        document.getElementById('total-products').textContent = Array.isArray(data) ? allProducts.length : (data.count || allProducts.length);
+        document.getElementById('low-stock-count').textContent = allProducts.filter((product) => product.stock <= product.minimum_stock).length;
+
         renderProducts();
-        document.getElementById('total-products').textContent = data.count || 0;
-        document.getElementById('low-stock-count').textContent = allProducts.filter(p => p.stock <= p.minimum_stock).length;
     } catch (error) {
+        document.getElementById('products-container').style.display = 'none';
         document.getElementById('no-results').style.display = 'block';
-        document.getElementById('no-results').textContent = 'Error cargando productos.';
+        document.getElementById('no-results').textContent = 'No se pudieron cargar los productos.';
+        errorBox.textContent = error.message;
+        errorBox.style.display = 'block';
+    } finally {
+        loading.style.display = 'none';
     }
 }
 
@@ -84,46 +179,141 @@ function renderProducts() {
     const tbody = document.getElementById('products-table-body');
     const container = document.getElementById('products-container');
     const noResults = document.getElementById('no-results');
-    
+
     tbody.innerHTML = '';
-    
+
     if (filteredProducts.length === 0) {
         container.style.display = 'none';
         noResults.style.display = 'block';
         return;
     }
-    
+
     container.style.display = 'block';
     noResults.style.display = 'none';
-    
-    filteredProducts.forEach(product => {
+
+    filteredProducts.forEach((product) => {
         const row = tbody.insertRow();
         const isLow = product.stock <= product.minimum_stock;
         const isCritical = product.stock < product.minimum_stock * 0.5;
         row.className = isCritical ? 'critical-stock table-danger' : isLow ? 'low-stock table-warning' : 'stock-ok';
-        
+
         row.innerHTML = `
-            <td>${product.name}</td>
-            <td><code>${product.sku}</code></td>
-            <td><span class="badge bg-info">${product.category?.name || 'N/A'}</span></td>
-            <td>${product.supplier?.name || 'N/A'}</td>
-            <td>${product.unit_measure}</td>
+            <td>${escapeHtml(product.name)}</td>
+            <td><code>${escapeHtml(product.sku)}</code></td>
+            <td><span class="badge bg-info">${escapeHtml(product.category_name || 'N/A')}</span></td>
+            <td>${escapeHtml(product.supplier_name || 'N/A')}</td>
+            <td>${escapeHtml(product.unit_measure)}</td>
             <td><strong class="${isLow ? 'text-warning' : ''}">${product.stock}</strong></td>
             <td>${product.minimum_stock}</td>
             <td>$${product.cost_price}</td>
             <td><strong>$${product.sale_price}</strong></td>
             <td>
-                <a href="/api/inventory/products/${product.id}/" class="btn btn-sm btn-outline-primary" target="_blank">Ver</a>
+                <a href="/api/inventory/products/${product.id}/" class="btn btn-sm btn-outline-primary" target="_blank">Ver API</a>
             </td>
         `;
     });
 }
 
+async function openProductModal() {
+    hideProductFormError();
+    document.getElementById('product-form').reset();
+
+    try {
+        await ensureProductDependencies();
+        productModal.show();
+    } catch (error) {
+        InventoryApp.showAlert(`No se pudieron cargar categorias o proveedores: ${error.message}`, 'danger');
+    }
+}
+
+async function ensureProductDependencies() {
+    if (categoriesOptions.length && suppliersOptions.length) {
+        return;
+    }
+
+    const [categoriesPayload, suppliersPayload] = await Promise.all([
+        InventoryApp.fetchAPI('categories/'),
+        InventoryApp.fetchAPI('suppliers/')
+    ]);
+
+    categoriesOptions = InventoryApp.getListData(categoriesPayload);
+    suppliersOptions = InventoryApp.getListData(suppliersPayload);
+
+    populateSelect(
+        document.getElementById('product-category'),
+        categoriesOptions,
+        'Selecciona una categoria',
+        (item) => item.name
+    );
+    populateSelect(
+        document.getElementById('product-supplier'),
+        suppliersOptions,
+        'Selecciona un proveedor',
+        (item) => item.name
+    );
+}
+
+async function submitProductForm(event) {
+    event.preventDefault();
+
+    const submitBtn = document.getElementById('product-submit-btn');
+    submitBtn.disabled = true;
+    hideProductFormError();
+
+    const payload = {
+        name: document.getElementById('product-name').value.trim(),
+        sku: document.getElementById('product-sku').value.trim(),
+        category: Number(document.getElementById('product-category').value),
+        supplier: Number(document.getElementById('product-supplier').value),
+        unit_measure: document.getElementById('product-unit-measure').value.trim(),
+        stock: Number(document.getElementById('product-stock').value),
+        minimum_stock: Number(document.getElementById('product-minimum-stock').value),
+        cost_price: document.getElementById('product-cost-price').value,
+        sale_price: document.getElementById('product-sale-price').value
+    };
+
+    try {
+        await InventoryApp.fetchAPI('products/', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        productModal.hide();
+        InventoryApp.showAlert('Producto creado correctamente.', 'success');
+        await loadProducts();
+    } catch (error) {
+        showProductFormError(error.message);
+    } finally {
+        submitBtn.disabled = false;
+    }
+}
+
+function showProductFormError(message) {
+    const errorEl = document.getElementById('product-form-error');
+    errorEl.textContent = message;
+    errorEl.classList.remove('d-none');
+}
+
+function hideProductFormError() {
+    const errorEl = document.getElementById('product-form-error');
+    errorEl.textContent = '';
+    errorEl.classList.add('d-none');
+}
+
+function populateSelect(selectElement, items, placeholder, getLabel) {
+    selectElement.innerHTML = `<option value="">${placeholder}</option>`;
+    items.forEach((item) => {
+        const option = document.createElement('option');
+        option.value = item.id;
+        option.textContent = getLabel(item);
+        selectElement.appendChild(option);
+    });
+}
+
 function filterProducts() {
     const query = document.getElementById('search-input').value.toLowerCase();
-    filteredProducts = allProducts.filter(p => 
-        p.name.toLowerCase().includes(query) || 
-        p.sku.toLowerCase().includes(query)
+    filteredProducts = allProducts.filter((product) =>
+        product.name.toLowerCase().includes(query) ||
+        product.sku.toLowerCase().includes(query)
     );
     renderProducts();
 }
@@ -138,6 +328,16 @@ function debounce(func, wait) {
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
     };
+}
+
+function escapeHtml(value) {
+    const text = value == null ? '' : String(value);
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 </script>
 {% endblock %}

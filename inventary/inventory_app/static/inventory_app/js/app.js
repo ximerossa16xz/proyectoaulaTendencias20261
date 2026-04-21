@@ -19,7 +19,15 @@ async function fetchAPI(endpoint, options = {}) {
         });
         
         if (!response.ok) {
-            throw new Error(`API Error: ${response.status}`);
+            const contentType = response.headers.get('content-type') || '';
+            let message = `API Error: ${response.status}`;
+
+            if (contentType.includes('application/json')) {
+                const errorData = await response.json();
+                message = formatAPIError(errorData, response.status);
+            }
+
+            throw new Error(message);
         }
 
         if (response.status === 204) {
@@ -34,7 +42,6 @@ async function fetchAPI(endpoint, options = {}) {
         return await response.text();
     } catch (error) {
         console.error('Fetch error:', error);
-        showAlert(`Error loading data: ${error.message}`, 'danger');
         throw error;
     }
 }
@@ -46,7 +53,7 @@ function showAlert(message, type = 'info') {
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     `;
-    const container = document.querySelector('.container') || document.body;
+    const container = document.querySelector('.container-fluid') || document.body;
     container.insertAdjacentHTML('afterbegin', alertHtml);
 }
 
@@ -69,9 +76,49 @@ function getCookie(name) {
     return cookieValue;
 }
 
+function formatAPIError(errorData, fallbackStatus) {
+    if (!errorData) {
+        return `API Error: ${fallbackStatus}`;
+    }
+
+    if (typeof errorData === 'string') {
+        return errorData;
+    }
+
+    if (errorData.detail) {
+        return errorData.detail;
+    }
+
+    const fragments = Object.entries(errorData).map(([field, value]) => {
+        if (Array.isArray(value)) {
+            return `${field}: ${value.join(', ')}`;
+        }
+        if (typeof value === 'object' && value !== null) {
+            return `${field}: ${JSON.stringify(value)}`;
+        }
+        return `${field}: ${value}`;
+    });
+
+    return fragments.join(' | ') || `API Error: ${fallbackStatus}`;
+}
+
+function getListData(payload) {
+    if (Array.isArray(payload)) {
+        return payload;
+    }
+
+    if (Array.isArray(payload?.results)) {
+        return payload.results;
+    }
+
+    return [];
+}
+
 // Export for use in templates
 window.InventoryApp = {
     fetchAPI,
+    formatAPIError,
+    getListData,
     showAlert,
     showLoading,
     getCookie

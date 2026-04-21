@@ -11,13 +11,14 @@
       rel="stylesheet"
     />
     <link href="{% static 'inventory_app/css/styles.css' %}" rel="stylesheet" />
+    {% block extra_css %}{% endblock %}
   </head>
 
   <body>
     <nav class="navbar navbar-expand-lg navbar-dark">
       <div class="container-fluid px-4">
-        <a class="navbar-brand fw-bold" href="{% url 'dashboard' %}">
-        Inventario
+        <a class="navbar-brand fw-bold" href="{% url 'inventory' %}">
+          Inventario
         </a>
 
         <button
@@ -34,13 +35,25 @@
               <a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a>
             </li>
             <li class="nav-item">
+              <a class="nav-link" href="{% url 'inventory' %}">Inventario</a>
+            </li>
+            <li class="nav-item">
               <a class="nav-link" href="{% url 'products' %}">Productos</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{% url 'categories' %}">Categorías</a>
+              <a class="nav-link" href="{% url 'categories' %}">Categorias</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="{% url 'suppliers' %}">Proveedores</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'movements' %}">Movimientos</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'restock' %}">Reposicion</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'alerts' %}">Alertas</a>
             </li>
           </ul>
 
@@ -58,9 +71,12 @@
             </li>
 
             <li class="nav-item">
-              <a href="{% url 'logout' %}" class="btn btn-light btn-sm px-3"
-                >Salir</a
-              >
+              <form method="post" action="{% url 'logout' %}" class="m-0">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-light btn-sm px-3">
+                  Salir
+                </button>
+              </form>
             </li>
           </ul>
         </div>

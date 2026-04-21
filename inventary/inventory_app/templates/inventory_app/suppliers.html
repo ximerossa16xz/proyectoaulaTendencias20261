@@ -19,6 +19,7 @@
     </div>
     <div class="card-body p-0">
         <div id="suppliers-loading" class="loading p-4">Cargando proveedores...</div>
+        <div id="suppliers-error" class="alert alert-danger m-3" style="display: none;"></div>
         <div id="suppliers-container" class="table-responsive" style="display: none;">
             <table class="table table-hover mb-0">
                 <thead>
@@ -125,13 +126,20 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 async function loadSuppliers() {
+    const loading = document.getElementById('suppliers-loading');
+    const errorBox = document.getElementById('suppliers-error');
+
     try {
         const data = await InventoryApp.fetchAPI('suppliers/');
-        suppliers = data.results || data || [];
+        suppliers = InventoryApp.getListData(data);
+        errorBox.style.display = 'none';
         renderSuppliers();
     } catch (error) {
-        document.getElementById('suppliers-loading').style.display = 'none';
-        InventoryApp.showAlert('Error cargando proveedores.', 'danger');
+        loading.style.display = 'none';
+        errorBox.textContent = error.message;
+        errorBox.style.display = 'block';
+        document.getElementById('suppliers-empty').style.display = 'block';
+        document.getElementById('suppliers-empty').textContent = 'No se pudieron cargar los proveedores.';
     }
 }
 

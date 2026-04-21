@@ -20,6 +20,14 @@
       <form method="post">
         {% csrf_token %}
 
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger" role="alert">
+          {% for error in form.non_field_errors %}
+          <div>{{ error }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
         <input
           type="text"
           name="username"
@@ -27,12 +35,28 @@
           placeholder="Usuario"
         />
 
+        {% if form.username.errors %}
+        <div class="text-warning small mb-3">
+          {% for error in form.username.errors %}
+          <div>{{ error }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
         <input
           type="password"
           name="password"
           class="form-control mb-3"
-          placeholder="Contraseña"
+          placeholder="Contrasena"
         />
+
+        {% if form.password.errors %}
+        <div class="text-warning small mb-3">
+          {% for error in form.password.errors %}
+          <div>{{ error }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
 
         <button class="btn btn-login w-100">Ingresar</button>
       </form>
