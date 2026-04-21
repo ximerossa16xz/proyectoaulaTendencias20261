@@ -1,0 +1,288 @@
+{% extends 'inventory_app/base.html' %}
+{% load static %}
+
+{% block title %}Categorias - Inventario{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 gap-3 flex-wrap">
+    <h2 class="mb-0">Categorias</h2>
+    {% if request.user.role == 'admin' or request.user.is_superuser %}
+    <button type="button" class="btn btn-primary" id="open-category-modal-btn">
+        Agregar categoria
+    </button>
+    {% endif %}
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h6>Estadisticas</h6>
+                <p>Total: <span id="total-categories">0</span></p>
+                <p>Activas: <span id="active-count">0</span></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Lista de categorias</h5>
+    </div>
+    <div class="card-body p-0">
+        <div id="categories-loading" class="loading p-4">Cargando categorias...</div>
+        <div id="categories-error" class="alert alert-danger m-3" style="display: none;"></div>
+        <div id="categories-container" class="table-responsive" style="display: none;">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Descripcion</th>
+                        <th>Estado</th>
+                        <th>Productos</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="categories-table-body"></tbody>
+            </table>
+        </div>
+        <div id="categories-empty" class="p-4 text-center text-muted" style="display: none;">
+            No hay categorias registradas.
+        </div>
+    </div>
+</div>
+
+{% if request.user.role == 'admin' or request.user.is_superuser %}
+<div class="modal fade" id="categoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="category-form">
+                <div class="modal-header">
+                    <h5 class="modal-title">Agregar categoria</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="category-name" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="category-name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="category-description" class="form-label">Descripcion</label>
+                        <textarea class="form-control" id="category-description" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="category-status" class="form-label">Estado</label>
+                        <select class="form-select" id="category-status" required>
+                            <option value="active">active</option>
+                            <option value="inactive">inactive</option>
+                        </select>
+                    </div>
+                    <div id="category-form-error" class="alert alert-danger mb-0 d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="category-submit-btn">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Eliminar categoria</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">Confirma la eliminacion de <strong id="delete-category-name"></strong>.</p>
+                <input type="hidden" id="delete-category-id">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirm-delete-category-btn">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const canManageCategories = "{{ request.user.role }}" === 'admin' || "{{ request.user.is_superuser|yesno:'true,false' }}" === 'true';
+let categoriesList = [];
+let categoryModal = null;
+let deleteCategoryModal = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    if (canManageCategories) {
+        categoryModal = new bootstrap.Modal(document.getElementById('categoryModal'));
+        deleteCategoryModal = new bootstrap.Modal(document.getElementById('deleteCategoryModal'));
+        document.getElementById('open-category-modal-btn').addEventListener('click', openCategoryModal);
+        document.getElementById('category-form').addEventListener('submit', submitCategoryForm);
+        document.getElementById('confirm-delete-category-btn').addEventListener('click', deleteCategory);
+    }
+
+    await loadCategories();
+});
+
+async function loadCategories() {
+    const loading = document.getElementById('categories-loading');
+    const errorBox = document.getElementById('categories-error');
+    const emptyBox = document.getElementById('categories-empty');
+    const container = document.getElementById('categories-container');
+    const tbody = document.getElementById('categories-table-body');
+
+    try {
+        InventoryApp.showLoading(loading);
+        errorBox.style.display = 'none';
+
+        const [allCatsPayload, activeCatsPayload] = await Promise.all([
+            InventoryApp.fetchAPI('categories/'),
+            InventoryApp.fetchAPI('categories/?status=active')
+        ]);
+
+        const allCats = InventoryApp.getListData(allCatsPayload);
+        const activeCats = InventoryApp.getListData(activeCatsPayload);
+        categoriesList = allCats;
+
+        document.getElementById('total-categories').textContent = Array.isArray(allCatsPayload) ? allCats.length : (allCatsPayload.count || allCats.length);
+        document.getElementById('active-count').textContent = Array.isArray(activeCatsPayload) ? activeCats.length : (activeCatsPayload.count || activeCats.length);
+
+        tbody.innerHTML = '';
+
+        if (!allCats.length) {
+            emptyBox.style.display = 'block';
+            container.style.display = 'none';
+            return;
+        }
+
+        allCats.forEach((cat) => {
+            const row = tbody.insertRow();
+            row.className = cat.status === 'active' ? 'table-success' : 'table-secondary';
+            const deleteButton = canManageCategories
+                ? `<button type="button" class="btn btn-sm btn-outline-danger" onclick="openDeleteCategory(${cat.id})">Eliminar</button>`
+                : '';
+
+            row.innerHTML = `
+                <td><strong>${escapeHtml(cat.name)}</strong></td>
+                <td>${escapeHtml(truncate(cat.description, 50))}</td>
+                <td><span class="badge ${cat.status === 'active' ? 'bg-success' : 'bg-secondary'}">${escapeHtml(cat.status)}</span></td>
+                <td>${cat.product_count ?? 0}</td>
+                <td class="d-flex gap-2">
+                    <a href="/api/inventory/categories/${cat.id}/" class="btn btn-sm btn-outline-primary" target="_blank">Ver API</a>
+                    ${deleteButton}
+                </td>
+            `;
+        });
+
+        emptyBox.style.display = 'none';
+        container.style.display = 'block';
+    } catch (error) {
+        errorBox.textContent = error.message;
+        errorBox.style.display = 'block';
+        emptyBox.style.display = 'block';
+        emptyBox.textContent = 'No se pudieron cargar las categorias.';
+    } finally {
+        loading.style.display = 'none';
+    }
+}
+
+function openCategoryModal() {
+    document.getElementById('category-form').reset();
+    document.getElementById('category-status').value = 'active';
+    hideCategoryFormError();
+    categoryModal.show();
+}
+
+async function submitCategoryForm(event) {
+    event.preventDefault();
+
+    const submitBtn = document.getElementById('category-submit-btn');
+    submitBtn.disabled = true;
+    hideCategoryFormError();
+
+    const payload = {
+        name: document.getElementById('category-name').value.trim(),
+        description: document.getElementById('category-description').value.trim(),
+        status: document.getElementById('category-status').value
+    };
+
+    try {
+        await InventoryApp.fetchAPI('categories/', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        categoryModal.hide();
+        InventoryApp.showAlert('Categoria creada correctamente.', 'success');
+        await loadCategories();
+    } catch (error) {
+        showCategoryFormError(error.message);
+    } finally {
+        submitBtn.disabled = false;
+    }
+}
+
+function openDeleteCategory(categoryId) {
+    const category = categoriesList.find((item) => item.id === categoryId);
+    if (!category) {
+        InventoryApp.showAlert('Categoria no encontrada.', 'warning');
+        return;
+    }
+
+    document.getElementById('delete-category-id').value = category.id;
+    document.getElementById('delete-category-name').textContent = category.name;
+    deleteCategoryModal.show();
+}
+
+async function deleteCategory() {
+    const deleteBtn = document.getElementById('confirm-delete-category-btn');
+    const categoryId = document.getElementById('delete-category-id').value;
+    deleteBtn.disabled = true;
+
+    try {
+        await InventoryApp.fetchAPI(`categories/${categoryId}/`, {
+            method: 'DELETE'
+        });
+        deleteCategoryModal.hide();
+        InventoryApp.showAlert('Categoria eliminada correctamente.', 'success');
+        await loadCategories();
+    } catch (error) {
+        InventoryApp.showAlert(`No se pudo eliminar la categoria: ${error.message}`, 'danger');
+    } finally {
+        deleteBtn.disabled = false;
+    }
+}
+
+function showCategoryFormError(message) {
+    const errorEl = document.getElementById('category-form-error');
+    errorEl.textContent = message;
+    errorEl.classList.remove('d-none');
+}
+
+function hideCategoryFormError() {
+    const errorEl = document.getElementById('category-form-error');
+    errorEl.textContent = '';
+    errorEl.classList.add('d-none');
+}
+
+function truncate(value, maxLength) {
+    if (!value || value.length <= maxLength) {
+        return value || '';
+    }
+    return `${value.slice(0, maxLength)}...`;
+}
+
+function escapeHtml(value) {
+    const text = value == null ? '' : String(value);
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+</script>
+{% endblock %}
