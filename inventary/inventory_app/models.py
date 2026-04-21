@@ -1,5 +1,4 @@
-from django.core.exceptions import ValidationError
-from django.db import models, transaction
+from django.db import models
 from django.utils import timezone
 
 
@@ -44,77 +43,6 @@ class Product(models.Model):
     def __str__(self):
         return self.name
 
-    def clean(self):
-        errors = {}
-        if self.stock < 0:
-            errors['stock'] = 'Stock cannot be negative.'
-        if self.minimum_stock < 0:
-            errors['minimum_stock'] = 'Minimum stock cannot be negative.'
-        if self.sale_price < self.cost_price:
-            errors['sale_price'] = 'Sale price cannot be lower than cost price.'
-        if errors:
-            raise ValidationError(errors)
-
-    def save(self, *args, **kwargs):
-        self.full_clean()
-        return super().save(*args, **kwargs)
-
-
-class InventoryMovement(models.Model):
-    MOVEMENT_TYPE_PURCHASE = 'purchase'
-    MOVEMENT_TYPE_RETURN = 'return'
-    MOVEMENT_TYPE_SALE = 'sale'
-    MOVEMENT_TYPE_ADJUSTMENT = 'adjustment'
-    MOVEMENT_TYPE_DISPOSAL = 'disposal'
-
-    INBOUND_TYPES = {MOVEMENT_TYPE_PURCHASE, MOVEMENT_TYPE_RETURN}
-    OUTBOUND_TYPES = {MOVEMENT_TYPE_SALE, MOVEMENT_TYPE_ADJUSTMENT, MOVEMENT_TYPE_DISPOSAL}
-    MOVEMENT_TYPE_CHOICES = [
-        (MOVEMENT_TYPE_PURCHASE, 'Purchase'),
-        (MOVEMENT_TYPE_RETURN, 'Return'),
-        (MOVEMENT_TYPE_SALE, 'Sale'),
-        (MOVEMENT_TYPE_ADJUSTMENT, 'Adjustment'),
-        (MOVEMENT_TYPE_DISPOSAL, 'Disposal'),
-    ]
-
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='inventory_movements')
-    movement_type = models.CharField(max_length=20, choices=MOVEMENT_TYPE_CHOICES)
-    quantity = models.PositiveIntegerField()
-    user = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, related_name='inventory_movements')
-    timestamp = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-timestamp']
-
-    def __str__(self):
-        return f'{self.product.name} - {self.movement_type} ({self.quantity})'
-
-    def clean(self):
-        if self.quantity <= 0:
-            raise ValidationError({'quantity': 'Quantity must be greater than 0.'})
-
-    def get_stock_delta(self):
-        if self.movement_type in self.INBOUND_TYPES:
-            return self.quantity
-        return -self.quantity
-
-    def save(self, *args, **kwargs):
-        self.full_clean()
-
-        if self.pk:
-            return super().save(*args, **kwargs)
-
-        with transaction.atomic():
-            product = Product.objects.select_for_update().get(pk=self.product_id)
-            new_stock = product.stock + self.get_stock_delta()
-
-            if new_stock < 0:
-                raise ValidationError({'quantity': 'This movement would leave the product with negative stock.'})
-
-            product.stock = new_stock
-            product.save(update_fields=['stock'])
-            return super().save(*args, **kwargs)
-
 
 class RestockOrder(models.Model):
     STATUS_CHOICES = [
@@ -135,28 +63,19 @@ class RestockOrder(models.Model):
         return f"RestockOrder {self.id} - {self.product.name} ({self.quantity} units)"
 
     def save(self, *args, **kwargs):
-        self.full_clean()
+        # Validate quantity > 0
+        if self.quantity <= 0:
+            raise ValueError("Quantity must be greater than 0")
 
+        # Get old status if this is an update
         old_status = None
         if self.pk:
-            old_status = RestockOrder.objects.only('status').get(pk=self.pk).status
+            old_status = RestockOrder.objects.get(pk=self.pk).status
 
-        with transaction.atomic():
-            if self.status == 'received' and old_status != 'received':
-                product = Product.objects.select_for_update().get(pk=self.product_id)
-                product.stock += self.quantity
-                product.save(update_fields=['stock'])
-                self.received_at = self.received_at or timezone.now()
-            elif self.status != 'received' and not self.pk:
-                self.received_at = None
-
-            return super().save(*args, **kwargs)
-
-    def clean(self):
-        errors = {}
-        if self.quantity <= 0:
-            errors['quantity'] = 'Quantity must be greater than 0.'
-        if self.status == 'received' and not self.received_at:
+        # Increment stock if status changed to received
+        if self.status == 'received' and old_status != 'received':
+            self.product.stock += self.quantity
+            self.product.save()
             self.received_at = timezone.now()
-        if errors:
-            raise ValidationError(errors)
+
+        super().save(*args, **kwargs)

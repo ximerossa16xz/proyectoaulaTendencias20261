@@ -66,38 +66,17 @@ def dashboard_view(request):
         },
         'endpoints_disponibles': {
             'categorias': {
-                'listar': '/api/inventory/categories/',
+                'listar': '/api/categories/',
                 'permiso': 'lectura' if user.role == 'operador' else 'lectura y escritura',
             },
             'proveedores': {
-                'listar': '/api/inventory/suppliers/',
+                'listar': '/api/suppliers/',
                 'permiso': 'lectura' if user.role == 'operador' else 'lectura y escritura',
             },
             'productos': {
-                'listar': '/api/inventory/products/',
+                'listar': '/api/products/',
                 'permiso': 'lectura' if user.role == 'operador' else 'lectura y escritura',
             },
-            'movimientos': {
-                'listar': '/api/inventory/movements/',
-                'permiso': 'lectura' if user.role == 'operador' else 'lectura y escritura',
-            },
-            'ordenes_reposicion': {
-                'listar': '/api/inventory/restock-orders/',
-                'permiso': 'lectura' if user.role == 'operador' else 'lectura y escritura',
-            },
-            'alertas_stock_bajo': {
-                'listar': '/api/inventory/products/alerts/low-stock/',
-                'permiso': 'lectura',
-            },
-        },
-        'vistas_disponibles': {
-            'dashboard': '/',
-            'productos': '/inventory/products/',
-            'categorias': '/inventory/categories/',
-            'proveedores': '/inventory/suppliers/',
-            'movimientos': '/inventory/movements/',
-            'reposicion': '/inventory/restock/',
-            'alertas': '/inventory/alerts/',
         },
         'permisos': {
             'puede_crear': user.role == 'admin',
