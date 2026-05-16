@@ -20,12 +20,12 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     'rest_framework',
-    'rest_framework.authtoken',
+
         
         # Local apps
 
     'inventary.accounts',
-    'inventory_app',
+    'inventary.inventory_app',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
@@ -49,7 +49,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'config.urls'
+ROOT_URLCONF = 'inventary.config.urls'
 
 TEMPLATES = [
     {
@@ -66,8 +66,8 @@ TEMPLATES = [
     },
 ]
 
-ROOT_URLCONF = 'config.urls'
-WSGI_APPLICATION = 'config.wsgi.application'
+ROOT_URLCONF = 'inventary.config.urls'
+WSGI_APPLICATION = 'inventary.config.wsgi.application'
 
 
 # Database

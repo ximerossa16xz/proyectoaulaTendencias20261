@@ -5,7 +5,7 @@ from django.contrib.auth import views as auth_views
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    path('', include('inventory_app.urls')),
+    path('', include('inventary.inventory_app.urls')),
     path('login/', auth_views.LoginView.as_view(
         template_name='inventory_app/login.html'
     ), name='login'),
@@ -16,6 +16,6 @@ urlpatterns = [
 
     path('api-auth/', include('rest_framework.urls')),
 
-    path('api/inventory/', include('inventory_app.api_urls')),
-    path('api/accounts/', include('accounts.urls')),
+    path('api/inventory/', include('inventary.inventory_app.api_urls')),
+    path('api/accounts/', include('inventary.accounts.urls')),
 ]

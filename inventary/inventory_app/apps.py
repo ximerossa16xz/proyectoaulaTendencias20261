@@ -1,4 +1,4 @@
 from django.apps import AppConfig
 
 class InventoryAppConfig(AppConfig):
-    name = 'inventory_app'
+    name = 'inventary.inventory_app'
