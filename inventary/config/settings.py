@@ -66,7 +66,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'config.wsgi.application'
+ROOT_URLCONF = 'inventary.config.urls'
+WSGI_APPLICATION = 'inventary.config.wsgi.application'
 
 
 # Database
