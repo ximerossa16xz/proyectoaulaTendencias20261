@@ -24,8 +24,8 @@ INSTALLED_APPS = [
         
         # Local apps
 
-    'inventary.accounts',
-    'inventary.inventory_app',
+    'accounts',
+    'inventory_app',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
