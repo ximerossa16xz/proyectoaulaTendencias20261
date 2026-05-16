@@ -24,7 +24,7 @@ INSTALLED_APPS = [
         
         # Local apps
 
-    'inventory.accounts',
+    'inventary.accounts',
     'inventory_app',
 ]
 
@@ -66,8 +66,8 @@ TEMPLATES = [
     },
 ]
 
-ROOT_URLCONF = 'inventary.config.urls'
-WSGI_APPLICATION = 'inventary.config.wsgi.application'
+ROOT_URLCONF = 'config.urls'
+WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Database
