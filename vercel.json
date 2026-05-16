@@ -1,13 +1,13 @@
 {
     "builds": [{
-      "src": "jeivercel/wsgi.py",
+      "src": "config/wsgi.py",
       "use": "@vercel/python",
       "config": { "maxLambdaSize": "15mb", "runtime": "python3.11.3" }
     }],
     "routes": [
       {
         "src": "/(.*)",
-        "dest": "jeivercel/wsgi.py"
+        "dest": "config/wsgi.py"
       }
     ]
 }
