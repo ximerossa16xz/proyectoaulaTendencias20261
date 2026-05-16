@@ -22,7 +22,7 @@ INSTALLED_APPS = [
     'rest_framework',
 
         
-        # Local apps
+    # Local apps
 
     'accounts',
     'inventory_app',
@@ -49,7 +49,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'inventary.config.urls'
+ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
     {
@@ -66,8 +66,8 @@ TEMPLATES = [
     },
 ]
 
-ROOT_URLCONF = 'inventary.config.urls'
-WSGI_APPLICATION = 'inventary.config.wsgi.application'
+ROOT_URLCONF = 'config.urls'
+WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Database
