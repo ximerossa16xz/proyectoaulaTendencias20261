@@ -24,7 +24,7 @@ INSTALLED_APPS = [
         
         # Local apps
 
-    'accounts',
+    'inventary.accounts',
     'inventory_app',
 ]
 
