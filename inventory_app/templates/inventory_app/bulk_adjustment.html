@@ -1,0 +1,422 @@
+{% extends 'inventory_app/base.html' %}
+
+{% block title %}Ajuste Masivo de Inventario{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Ajuste Masivo de Inventario</h2>
+</div>
+
+<div class="row">
+    <!-- Panel de entrada -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Seleccionar Productos para Ajuste</h5>
+            </div>
+            <div class="card-body">
+                <!-- Formulario de búsqueda -->
+                <div class="mb-3">
+                    <label for="product-search" class="form-label">Buscar Producto</label>
+                    <input type="text" class="form-control" id="product-search" placeholder="Nombre, SKU o categoría...">
+                    <div id="search-results" class="mt-2" style="display: none;">
+                        <div class="list-group" id="products-list"></div>
+                    </div>
+                </div>
+
+                <!-- Tabla de productos seleccionados -->
+                <div class="table-responsive">
+                    <table class="table table-sm" id="adjustment-table">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>SKU</th>
+                                <th>Stock Actual</th>
+                                <th>Nuevo Stock</th>
+                                <th>Delta</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="adjustment-body">
+                            <tr id="empty-message">
+                                <td colspan="6" class="text-center py-4">No hay productos seleccionados</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Razón del ajuste -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Información del Ajuste</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="adjustment-reason" class="form-label">Razón del Ajuste *</label>
+                    <textarea class="form-control" id="adjustment-reason" rows="3" 
+                              placeholder="Ejemplo: Inventario físico, corrección de datos errados, etc." required></textarea>
+                    <small id="reason-error" class="text-danger" style="display: none;"></small>
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <button type="button" class="btn btn-secondary" onclick="clearAllAdjustments()">Limpiar Todo</button>
+                    <button type="button" class="btn btn-primary" id="submit-btn" onclick="submitBulkAdjustment()" disabled>
+                        <span id="submit-text">Procesar Ajuste</span>
+                        <span id="submit-loading" style="display: none;">
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            Procesando...
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel de resumen -->
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Resumen</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Productos seleccionados:</span>
+                        <strong id="summary-count">0</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Aumentos:</span>
+                        <strong class="text-success" id="summary-increases">0</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Disminuciones:</span>
+                        <strong class="text-danger" id="summary-decreases">0</strong>
+                    </div>
+                </div>
+                <hr>
+                <div id="error-list" class="alert alert-danger" style="display: none;">
+                    <h6 class="mb-2">Errores:</h6>
+                    <ul id="error-items" class="mb-0"></ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resultados -->
+        <div class="card" id="results-card" style="display: none;">
+            <div class="card-header">
+                <h5 class="mb-0">Resultados del Ajuste</h5>
+            </div>
+            <div class="card-body">
+                <div id="results-content"></div>
+                <button type="button" class="btn btn-primary w-100 mt-3" onclick="resetForm()">Nuevo Ajuste</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let adjustments = {}; // {product_id: {product, old_stock, new_stock}, ...}
+let allProducts = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadAllProducts();
+    setupSearchListener();
+    updateSummary();
+});
+
+// Cargar lista completa de productos
+async function loadAllProducts() {
+    try {
+        const payload = await InventoryApp.fetchAPI('products/');
+        allProducts = InventoryApp.getListData(payload);
+    } catch (error) {
+        console.error('Error cargando productos:', error);
+    }
+}
+
+// Setup para búsqueda
+function setupSearchListener() {
+    const searchInput = document.getElementById('product-search');
+    searchInput.addEventListener('input', debounce(performSearch, 300));
+}
+
+// Debounce helper
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Búsqueda de productos
+function performSearch() {
+    const searchTerm = document.getElementById('product-search').value.toLowerCase().trim();
+    
+    if (!searchTerm) {
+        document.getElementById('search-results').style.display = 'none';
+        return;
+    }
+
+    const results = allProducts.filter(p =>
+        p.name.toLowerCase().includes(searchTerm) ||
+        p.sku.toLowerCase().includes(searchTerm) ||
+        p.category_name.toLowerCase().includes(searchTerm)
+    ).slice(0, 10);
+
+    const list = document.getElementById('products-list');
+    list.innerHTML = '';
+
+    results.forEach(product => {
+        const item = document.createElement('a');
+        item.href = '#';
+        item.className = 'list-group-item list-group-item-action';
+        item.innerHTML = `
+            <div class="d-flex justify-content-between">
+                <div>
+                    <strong>${escapeHtml(product.name)}</strong>
+                    <div class="small">${escapeHtml(product.sku)} • ${escapeHtml(product.category_name)}</div>
+                </div>
+                <div class="text-end">
+                    <strong>Stock: ${product.stock}</strong>
+                </div>
+            </div>
+        `;
+        item.onclick = (e) => {
+            e.preventDefault();
+            addProductToAdjustment(product);
+        };
+        list.appendChild(item);
+    });
+
+    document.getElementById('search-results').style.display = results.length ? 'block' : 'none';
+}
+
+// Agregar producto al ajuste
+function addProductToAdjustment(product) {
+    if (!adjustments[product.id]) {
+        adjustments[product.id] = {
+            product: product,
+            old_stock: product.stock,
+            new_stock: product.stock
+        };
+    }
+
+    document.getElementById('product-search').value = '';
+    document.getElementById('search-results').style.display = 'none';
+    updateTable();
+    updateSummary();
+}
+
+// Actualizar tabla de ajustes
+function updateTable() {
+    const tbody = document.getElementById('adjustment-body');
+    const items = Object.values(adjustments);
+    
+    if (items.length === 0) {
+        tbody.innerHTML = '<tr id="empty-message"><td colspan="6" class="text-center py-4">No hay productos seleccionados</td></tr>';
+        return;
+    }
+
+    const emptyMsg = document.getElementById('empty-message');
+    if (emptyMsg) emptyMsg.remove();
+
+    tbody.innerHTML = '';
+
+    items.forEach(item => {
+        const delta = item.new_stock - item.old_stock;
+        const deltaClass = delta > 0 ? 'text-success' : delta < 0 ? 'text-danger' : '';
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><strong>${escapeHtml(item.product.name)}</strong></td>
+            <td>${escapeHtml(item.product.sku)}</td>
+            <td>${item.old_stock}</td>
+            <td>
+                <input type="number" class="form-control form-control-sm" value="${item.new_stock}" 
+                       onchange="updateNewStock(${item.product.id}, this.value)">
+            </td>
+            <td class="${deltaClass}"><strong>${delta > 0 ? '+' : ''}${delta}</strong></td>
+            <td>
+                <button class="btn btn-sm btn-danger" onclick="removeProduct(${item.product.id})">X</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Actualizar stock en el ajuste
+function updateNewStock(productId, newValue) {
+    if (adjustments[productId]) {
+        adjustments[productId].new_stock = parseInt(newValue) || 0;
+        updateSummary();
+    }
+}
+
+// Remover producto del ajuste
+function removeProduct(productId) {
+    delete adjustments[productId];
+    updateTable();
+    updateSummary();
+}
+
+// Limpiar todos los ajustes
+function clearAllAdjustments() {
+    if (confirm('¿Estás seguro de que deseas limpiar todos los ajustes?')) {
+        adjustments = {};
+        updateTable();
+        updateSummary();
+        document.getElementById('adjustment-reason').value = '';
+    }
+}
+
+// Actualizar resumen
+function updateSummary() {
+    const items = Object.values(adjustments);
+    const increases = items.filter(i => i.new_stock > i.old_stock).length;
+    const decreases = items.filter(i => i.new_stock < i.old_stock).length;
+
+    document.getElementById('summary-count').textContent = items.length;
+    document.getElementById('summary-increases').textContent = increases;
+    document.getElementById('summary-decreases').textContent = decreases;
+
+    // Habilitar/deshabilitar botón submit
+    const submitBtn = document.getElementById('submit-btn');
+    submitBtn.disabled = items.length === 0 || !document.getElementById('adjustment-reason').value.trim();
+}
+
+// Validar cambios en textarea
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('adjustment-reason').addEventListener('input', updateSummary);
+});
+
+// Enviar ajuste masivo
+async function submitBulkAdjustment() {
+    const reason = document.getElementById('adjustment-reason').value.trim();
+    const items = Object.values(adjustments);
+
+    if (!reason) {
+        document.getElementById('reason-error').textContent = 'La razón es requerida';
+        document.getElementById('reason-error').style.display = 'block';
+        return;
+    }
+
+    if (items.length === 0) {
+        alert('Selecciona al menos un producto');
+        return;
+    }
+
+    const submitBtn = document.getElementById('submit-btn');
+    const submitText = document.getElementById('submit-text');
+    const submitLoading = document.getElementById('submit-loading');
+
+    try {
+        submitBtn.disabled = true;
+        submitText.style.display = 'none';
+        submitLoading.style.display = 'inline';
+
+        const payload = {
+            adjustments: items.map(item => ({
+                product_id: item.product.id,
+                new_stock: item.new_stock
+            })),
+            reason: reason
+        };
+
+        const response = await InventoryApp.fetchAPI('adjustments/bulk/', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+
+        // Mostrar resultados
+        displayResults(response);
+
+    } catch (error) {
+        alert('Error: ' + error.message);
+        console.error(error);
+    } finally {
+        submitBtn.disabled = false;
+        submitText.style.display = 'inline';
+        submitLoading.style.display = 'none';
+    }
+}
+
+// Mostrar resultados
+function displayResults(response) {
+    const resultsCard = document.getElementById('results-card');
+    const resultsContent = document.getElementById('results-content');
+
+    let html = `
+        <div class="alert alert-${response.status === 'success' ? 'success' : 'warning'}">
+            <strong>Estado: ${response.status}</strong>
+            <p class="mb-0">Exitosos: ${response.successful} / ${response.total_adjustments}</p>
+    `;
+
+    if (response.failed > 0) {
+        html += `<p class="mb-0">Errores: ${response.failed}</p>`;
+    }
+
+    html += '</div>';
+
+    if (response.results && response.results.length > 0) {
+        html += '<h6>Productos Ajustados:</h6><div class="table-responsive"><table class="table table-sm"><thead><tr><th>Producto</th><th>Anterior</th><th>Nuevo</th><th>Cambio</th></tr></thead><tbody>';
+        
+        response.results.forEach(result => {
+            const deltaClass = result.delta > 0 ? 'text-success' : result.delta < 0 ? 'text-danger' : '';
+            html += `
+                <tr>
+                    <td>${escapeHtml(result.product_name)}</td>
+                    <td>${result.old_stock}</td>
+                    <td>${result.new_stock}</td>
+                    <td class="${deltaClass}"><strong>${result.delta > 0 ? '+' : ''}${result.delta}</strong></td>
+                </tr>
+            `;
+        });
+
+        html += '</tbody></table></div>';
+    }
+
+    if (response.errors && response.errors.length > 0) {
+        html += '<h6 class="mt-3">Errores:</h6><ul>';
+        response.errors.forEach(error => {
+            html += `<li>${escapeHtml(error.error)}</li>`;
+        });
+        html += '</ul>';
+    }
+
+    resultsContent.innerHTML = html;
+    resultsCard.style.display = 'block';
+}
+
+// Resetear formulario
+function resetForm() {
+    adjustments = {};
+    document.getElementById('adjustment-reason').value = '';
+    document.getElementById('search-results').style.display = 'none';
+    document.getElementById('product-search').value = '';
+    document.getElementById('results-card').style.display = 'none';
+    updateTable();
+    updateSummary();
+}
+
+function escapeHtml(value) {
+    const text = value == null ? '' : String(value);
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+</script>
+{% endblock %}

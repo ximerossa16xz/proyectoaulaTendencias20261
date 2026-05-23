@@ -7,6 +7,51 @@
     <h2>Movimientos de inventario</h2>
 </div>
 
+<!-- Formulario para crear movimiento -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Crear nuevo movimiento</h5>
+    </div>
+    <div class="card-body">
+        <form id="movement-form">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="movement-product" class="form-label">Producto *</label>
+                    <select class="form-select" id="movement-product" required>
+                        <option value="">Seleccionar producto...</option>
+                    </select>
+                    <small id="product-error" class="text-danger"></small>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="movement-type" class="form-label">Tipo de movimiento *</label>
+                    <select class="form-select" id="movement-type" required>
+                        <option value="">Seleccionar tipo...</option>
+                        <option value="purchase">Compra</option>
+                        <option value="return">Devolución</option>
+                        <option value="sale">Venta</option>
+                        <option value="adjustment">Ajuste</option>
+                        <option value="disposal">Descarte</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="movement-quantity" class="form-label">Cantidad *</label>
+                    <input type="number" class="form-control" id="movement-quantity" min="1" required>
+                    <small id="quantity-error" class="text-danger"></small>
+                </div>
+            </div>
+            <div id="form-error" class="alert alert-danger" style="display: none;"></div>
+            <button type="submit" class="btn btn-primary">
+                <span id="btn-text">Crear movimiento</span>
+                <span id="btn-loading" style="display: none;">
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Creando...
+                </span>
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Historial de movimientos -->
 <div class="card">
     <div class="card-header">
         <h5 class="mb-0">Historial de movimientos</h5>
@@ -28,7 +73,7 @@
                 <tbody id="movements-table-body"></tbody>
             </table>
         </div>
-        <div id="movements-empty" class="p-4 text-center text-muted" style="display: none;">
+        <div id="movements-empty" class="p-4 text-center" style="display: none;">
             No hay movimientos registrados.
         </div>
     </div>
@@ -37,7 +82,102 @@
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', loadMovements);
+document.addEventListener('DOMContentLoaded', () => {
+    loadProducts();
+    loadMovements();
+    
+    // Manejar envío del formulario
+    document.getElementById('movement-form').addEventListener('submit', createMovement);
+});
+
+// Cargar lista de productos en el dropdown
+async function loadProducts() {
+    try {
+        const payload = await InventoryApp.fetchAPI('products/');
+        const products = InventoryApp.getListData(payload);
+        const select = document.getElementById('movement-product');
+        
+        products.forEach(product => {
+            const option = document.createElement('option');
+            option.value = product.id;
+            option.textContent = `${product.name} (Stock: ${product.stock})`;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error cargando productos:', error);
+    }
+}
+
+// Crear nuevo movimiento
+async function createMovement(event) {
+    event.preventDefault();
+    
+    const form = document.getElementById('movement-form');
+    const productId = document.getElementById('movement-product').value;
+    const movementType = document.getElementById('movement-type').value;
+    const quantity = document.getElementById('movement-quantity').value;
+    const formError = document.getElementById('form-error');
+    const btnText = document.getElementById('btn-text');
+    const btnLoading = document.getElementById('btn-loading');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    
+    // Limpiar errores previos
+    formError.style.display = 'none';
+    document.getElementById('product-error').textContent = '';
+    document.getElementById('quantity-error').textContent = '';
+    
+    // Validaciones básicas
+    if (!productId) {
+        document.getElementById('product-error').textContent = 'Selecciona un producto';
+        return;
+    }
+    
+    if (!movementType) {
+        formError.textContent = 'Selecciona un tipo de movimiento';
+        formError.style.display = 'block';
+        return;
+    }
+    
+    if (!quantity || parseInt(quantity) <= 0) {
+        document.getElementById('quantity-error').textContent = 'La cantidad debe ser mayor a 0';
+        return;
+    }
+    
+    try {
+        // Mostrar estado de carga
+        submitBtn.disabled = true;
+        btnText.style.display = 'none';
+        btnLoading.style.display = 'inline';
+        
+        const response = await InventoryApp.fetchAPI('movements/', {
+            method: 'POST',
+            body: JSON.stringify({
+                product: parseInt(productId),
+                movement_type: movementType,
+                quantity: parseInt(quantity)
+            })
+        });
+        
+        // Éxito
+        InventoryApp.showAlert('Movimiento creado exitosamente', 'success');
+        
+        // Limpiar formulario
+        form.reset();
+        
+        // Recargar movimientos
+        loadMovements();
+        
+    } catch (error) {
+        formError.textContent = error.message;
+        formError.style.display = 'block';
+        console.error('Error creando movimiento:', error);
+    } finally {
+        // Restaurar botón
+        submitBtn.disabled = false;
+        btnText.style.display = 'inline';
+        btnLoading.style.display = 'none';
+    }
+}
 
 async function loadMovements() {
     const loading = document.getElementById('movements-loading');

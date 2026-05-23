@@ -297,7 +297,7 @@ function renderInventoryProducts(products) {
         row.innerHTML = `
             <td>
                 <strong>${escapeHtml(product.name)}</strong>
-                <div class="small text-muted">${escapeHtml(product.sku)}</div>
+                <div class="small">${escapeHtml(product.sku)}</div>
             </td>
             <td>${escapeHtml(product.category_name || 'N/A')}</td>
             <td>${escapeHtml(product.supplier_name || 'N/A')}</td>
