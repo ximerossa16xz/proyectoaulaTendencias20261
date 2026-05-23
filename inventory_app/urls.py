@@ -7,7 +7,10 @@ from .views import (
     suppliers_view,
     movements_view,
     restock_view,
-    alerts_view
+    alerts_view,
+    reports_view,
+    bulk_adjustment_view,
+    warehouses_view
 )
 
 urlpatterns = [
@@ -20,4 +23,7 @@ urlpatterns = [
     path('inventory/movements/', movements_view, name='movements'),
     path('inventory/restock/', restock_view, name='restock'),
     path('inventory/alerts/', alerts_view, name='alerts'),
+    path('inventory/reports/', reports_view, name='reports'),
+    path('inventory/bulk-adjustment/', bulk_adjustment_view, name='bulk_adjustment'),
+    path('inventory/warehouses/', warehouses_view, name='warehouses'),
 ]

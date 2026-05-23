@@ -1,5 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
+* {
+    /* Removido color: white global para evitar conflictos */
+}
+
 body{
 font-family:Poppins,sans-serif;
 background:linear-gradient(135deg,#0f172a,#1e293b,#334155);
@@ -21,6 +25,20 @@ background:rgba(255,255,255,.08);
 border:none;
 border-radius:18px;
 box-shadow:0 10px 25px rgba(0,0,0,.25);
+color: #ffffff;
+}
+
+/* Estilos para tablas - aplica a todas las tablas */
+.table{
+--bs-table-bg: transparent;
+--bs-table-striped-bg: rgba(255,255,255,.04);
+--bs-table-hover-bg: rgba(56,189,248,.10);
+--bs-table-color: #e2e8f0;
+--bs-table-striped-color: #e2e8f0;
+--bs-table-hover-color: #f8fafc;
+--bs-table-border-color: rgba(148,163,184,.35);
+color: #e2e8f0;
+background-color: transparent;
 }
 
 .card .table{
@@ -39,9 +57,20 @@ background-color:transparent;
 border-bottom-color:rgba(148,163,184,.35);
 }
 
+.table > :not(caption) > * > *{
+background-color: transparent;
+border-bottom-color: rgba(148,163,184,.35);
+}
+
 .card .table thead th{
 color:#f8fafc;
 font-weight:600;
+}
+
+.table thead th{
+color: #f8fafc;
+font-weight: 600;
+background-color: transparent;
 }
 
 .stats-number{
@@ -71,10 +100,129 @@ backdrop-filter:blur(15px);
 box-shadow:0 10px 30px rgba(0,0,0,.25);
 }
 
+/* Estilos para inputs en fondo oscuro */
 .form-control{
-border:none;
+border:1px solid rgba(226,232,240,.3);
 border-radius:12px;
 padding:12px;
+background:rgba(255,255,255,.08);
+color:#f8fafc;
+font-size:0.95rem;
+}
+
+.form-control::placeholder{
+color:rgba(226,232,240,.6);
+}
+
+.form-control:focus{
+background:rgba(255,255,255,.12);
+color:#f8fafc;
+border-color:#38bdf8;
+box-shadow:0 0 0 .2rem rgba(56,189,248,.2);
+}
+
+.form-control:disabled,
+.form-control[readonly]{
+background:rgba(255,255,255,.05);
+color:rgba(226,232,240,.5);
+border-color:rgba(226,232,240,.2);
+}
+
+/* Estilos para form-label */
+.form-label{
+color:#e2e8f0;
+font-weight:500;
+margin-bottom:0.5rem;
+}
+
+/* Selects con contraste mejorado */
+.form-select{
+border:1px solid rgba(226,232,240,.3);
+border-radius:12px;
+padding:12px;
+background:rgba(255,255,255,.08) url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23e2e8f0' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") right 0.75rem center/16px 16px no-repeat;
+color:#f8fafc;
+padding-right:2.25rem;
+}
+
+.form-select:focus{
+background-color:rgba(255,255,255,.12);
+color:#f8fafc;
+border-color:#38bdf8;
+box-shadow:0 0 0 .2rem rgba(56,189,248,.2);
+}
+
+.form-select option{
+color:#0f172a;
+background:#f8fafc;
+}
+
+.form-select:disabled{
+background:rgba(255,255,255,.05) url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23a8b1b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") right 0.75rem center/16px 16px no-repeat;
+color:rgba(226,232,240,.5);
+border-color:rgba(226,232,240,.2);
+padding-right:2.25rem;
+}
+
+/* Small text en inputs */
+.form-text, small{
+color:rgba(226,232,240,.75);
+}
+
+.text-danger{
+color:#ef4444 !important;
+}
+
+.text-success{
+color:#10b981 !important;
+}
+
+.text-warning{
+color:#f59e0b !important;
+}
+
+.text-info{
+color:#38bdf8 !important;
+}
+
+/* Botones con mejor contraste */
+.btn-primary{
+background:#38bdf8;
+border-color:#38bdf8;
+color:#0f172a;
+font-weight:600;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active{
+background:#0ea5e9;
+border-color:#0ea5e9;
+color:#0f172a;
+}
+
+.btn-success{
+background:#10b981;
+border-color:#10b981;
+color:#ffffff;
+font-weight:600;
+}
+
+.btn-success:hover{
+background:#059669;
+border-color:#059669;
+}
+
+.btn-danger{
+background:#ef4444;
+border-color:#ef4444;
+color:#ffffff;
+font-weight:600;
+}
+
+.btn-danger:hover{
+background:#dc2626;
+border-color:#dc2626;
 }
 
 .btn-login{
@@ -83,10 +231,29 @@ color:white;
 border:none;
 padding:12px;
 border-radius:12px;
+font-weight:600;
 }
 
 .btn-login:hover{
 background:#db2777;
+color:white;
+}
+
+/* Mejorar legibilidad de badges */
+.badge{
+padding:0.5rem 0.75rem;
+font-weight:600;
+font-size:0.85rem;
+}
+
+.badge.bg-pink{
+background:#ec4899 !important;
+color:#ffffff;
+}
+
+.badge.bg-info{
+background:#38bdf8 !important;
+color:#0f172a;
 }
 
 /* Improve modal contrast over dark app background */
@@ -98,8 +265,17 @@ border-radius:16px;
 box-shadow:0 16px 40px rgba(2,6,23,.35);
 }
 
-.modal-header,
+.modal-header{
+background:#f1f5f9;
+border-color:#e2e8f0;
+}
+
+.modal-header .btn-close{
+filter: invert(0);
+}
+
 .modal-footer{
+background:#f1f5f9;
 border-color:#e2e8f0;
 }
 
@@ -117,7 +293,301 @@ color:#0f172a;
 border:1px solid #cbd5e1;
 }
 
+.modal .form-control::placeholder{
+color:#94a3b8;
+}
+
 .modal .form-control:focus{
 border-color:#38bdf8;
 box-shadow:0 0 0 .2rem rgba(56,189,248,.2);
+background:#ffffff;
+color:#0f172a;
+}
+
+.modal .form-select{
+background:#ffffff url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23000' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") right 0.75rem center/16px 16px no-repeat;
+color:#0f172a;
+border:1px solid #cbd5e1;
+padding-right:2.25rem;
+}
+
+.modal .form-select:focus{
+border-color:#38bdf8;
+box-shadow:0 0 0 .2rem rgba(56,189,248,.2);
+background:#ffffff;
+color:#0f172a;
+}
+
+.modal .form-select option{
+color:#0f172a;
+background:#ffffff;
+}
+
+.modal .btn-primary{
+background:#38bdf8;
+border-color:#38bdf8;
+color:#0f172a;
+font-weight:600;
+}
+
+.modal .btn-primary:hover,
+.modal .btn-primary:focus{
+background:#0ea5e9;
+border-color:#0ea5e9;
+color:#0f172a;
+}
+
+/* Alertas con mejor contraste */
+.alert{
+border-radius:12px;
+border:none;
+}
+
+.alert-danger{
+background:rgba(239,68,68,.15);
+color:#fecaca;
+border:1px solid rgba(239,68,68,.3);
+}
+
+.alert-success{
+background:rgba(16,185,129,.15);
+color:#a7f3d0;
+border:1px solid rgba(16,185,129,.3);
+}
+
+.alert-warning{
+background:rgba(245,158,11,.15);
+color:#fcd34d;
+border:1px solid rgba(245,158,11,.3);
+}
+
+.alert-info{
+background:rgba(56,189,248,.15);
+color:#a5f3fc;
+border:1px solid rgba(56,189,248,.3);
+}
+
+/* Elementos adicionales de bootstrap */
+.list-group-item{
+background:rgba(255,255,255,.08);
+color:#e2e8f0;
+border-color:rgba(226,232,240,.2);
+}
+
+.list-group-item.active{
+background:#38bdf8;
+color:#0f172a;
+border-color:#38bdf8;
+}
+
+.list-group-item:hover{
+background:rgba(255,255,255,.12);
+color:#f8fafc;
+}
+
+/* Pagination */
+.pagination .page-link{
+background:rgba(255,255,255,.08);
+border-color:rgba(226,232,240,.2);
+color:#e2e8f0;
+}
+
+.pagination .page-link:hover{
+background:rgba(255,255,255,.15);
+border-color:#38bdf8;
+color:#38bdf8;
+}
+
+.pagination .page-item.active .page-link{
+background:#38bdf8;
+border-color:#38bdf8;
+color:#0f172a;
+}
+
+/* Breadcrumb */
+.breadcrumb{
+background:transparent;
+}
+
+.breadcrumb-item{
+color:rgba(226,232,240,.75);
+}
+
+.breadcrumb-item.active{
+color:#e2e8f0;
+}
+
+.breadcrumb-item a{
+color:#38bdf8;
+text-decoration:none;
+}
+
+.breadcrumb-item a:hover{
+color:#0ea5e9;
+}
+
+/* Nav pills */
+.nav-pills .nav-link{
+color:#e2e8f0;
+background:transparent;
+}
+
+.nav-pills .nav-link:hover,
+.nav-pills .nav-link:focus{
+background:rgba(255,255,255,.1);
+color:#f8fafc;
+}
+
+.nav-pills .nav-link.active{
+background:#38bdf8;
+color:#0f172a;
+}
+
+/* Input groups */
+.input-group-text{
+background:rgba(255,255,255,.08);
+border-color:rgba(226,232,240,.3);
+color:#e2e8f0;
+}
+
+/* Tables dentro de cards (ya están estilizadas) */
+.table-responsive{
+color:#e2e8f0;
+}
+
+/* Spinners */
+.spinner-border{
+border-color:rgba(255,255,255,.25);
+border-right-color:#38bdf8;
+}
+
+/* Tooltips y popovers */
+.tooltip-inner{
+background:#1e293b;
+color:#f8fafc;
+border-radius:8px;
+}
+
+.popover{
+background:#1e293b;
+border:1px solid rgba(226,232,240,.2);
+}
+
+.popover-header{
+background:rgba(255,255,255,.08);
+border-color:rgba(226,232,240,.2);
+color:#f8fafc;
+}
+
+.popover-body{
+color:#e2e8f0;
+}
+
+/* Dropdowns */
+.dropdown-menu{
+background:rgba(30,41,59,.95);
+backdrop-filter:blur(10px);
+border:1px solid rgba(226,232,240,.2);
+border-radius:12px;
+}
+
+.dropdown-item{
+color:#e2e8f0;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus{
+background:rgba(255,255,255,.1);
+color:#f8fafc;
+}
+
+.dropdown-item.active{
+background:#38bdf8;
+color:#0f172a;
+}
+
+/* Tabs */
+.nav-tabs{
+border-color:rgba(226,232,240,.2);
+}
+
+.nav-tabs .nav-link{
+color:#e2e8f0;
+border-color:transparent;
+}
+
+.nav-tabs .nav-link:hover{
+border-color:rgba(226,232,240,.3);
+color:#f8fafc;
+}
+
+.nav-tabs .nav-link.active{
+background:transparent;
+border-color:#38bdf8;
+color:#38bdf8;
+}
+
+/* Estilos para filas de tabla coloreadas */
+.table-danger,
+.table-danger > td,
+.table-danger > th {
+--bs-table-color: #fecaca;
+--bs-table-bg: rgba(239,68,68,.15);
+background-color: rgba(239,68,68,.15);
+color: #fecaca;
+}
+
+.table-danger:hover,
+.table-danger:hover > td,
+.table-danger:hover > th {
+--bs-table-hover-bg: rgba(239,68,68,.25);
+background-color: rgba(239,68,68,.25);
+}
+
+.table-warning,
+.table-warning > td,
+.table-warning > th {
+--bs-table-color: #fcd34d;
+--bs-table-bg: rgba(245,158,11,.15);
+background-color: rgba(245,158,11,.15);
+color: #fcd34d;
+}
+
+.table-warning:hover,
+.table-warning:hover > td,
+.table-warning:hover > th {
+--bs-table-hover-bg: rgba(245,158,11,.25);
+background-color: rgba(245,158,11,.25);
+}
+
+.table-success,
+.table-success > td,
+.table-success > th {
+--bs-table-color: #a7f3d0;
+--bs-table-bg: rgba(16,185,129,.15);
+background-color: rgba(16,185,129,.15);
+color: #a7f3d0;
+}
+
+.table-success:hover,
+.table-success:hover > td,
+.table-success:hover > th {
+--bs-table-hover-bg: rgba(16,185,129,.25);
+background-color: rgba(16,185,129,.25);
+}
+
+.table-info,
+.table-info > td,
+.table-info > th {
+--bs-table-color: #a5f3fc;
+--bs-table-bg: rgba(56,189,248,.15);
+background-color: rgba(56,189,248,.15);
+color: #a5f3fc;
+}
+
+.table-info:hover,
+.table-info:hover > td,
+.table-info:hover > th {
+--bs-table-hover-bg: rgba(56,189,248,.25);
+background-color: rgba(56,189,248,.25);
 }

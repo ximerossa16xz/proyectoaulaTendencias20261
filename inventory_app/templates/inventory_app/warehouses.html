@@ -1,0 +1,690 @@
+{% extends 'inventory_app/base.html' %}
+{% load static %}
+
+{% block title %}Bodegas - Inventario{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Gestión de Bodegas</h2>
+    {% if request.user.role == 'admin' or request.user.is_superuser %}
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#warehouseModal" id="new-warehouse-btn">
+        Nueva Bodega
+    </button>
+    {% endif %}
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Bodegas</h5>
+            </div>
+            <div class="card-body p-0">
+                <div id="warehouses-loading" class="loading p-4">Cargando bodegas...</div>
+                <div id="warehouses-error" class="alert alert-danger m-3" style="display: none;"></div>
+                <div id="warehouses-container" class="table-responsive" style="display: none;">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Ubicación</th>
+                                <th>Capacidad</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="warehouses-table-body">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="warehouses-empty" class="p-4 text-center" style="display: none;">
+                    No hay bodegas registradas.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sección de Stock por Bodega -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Stock por Bodega</h5>
+                    {% if request.user.role == 'admin' or request.user.is_superuser %}
+                    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#warehouseStockModal" id="add-stock-btn">
+                        Asignar Stock
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div id="stocks-loading" class="loading p-4">Cargando stock...</div>
+                <div id="stocks-error" class="alert alert-danger m-3" style="display: none;"></div>
+                <div id="stocks-container" class="table-responsive" style="display: none;">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>SKU</th>
+                                <th>Bodega</th>
+                                <th>Stock</th>
+                                <th>Última Actualización</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stocks-table-body">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="stocks-empty" class="p-4 text-center" style="display: none;">
+                    No hay stock asignado a bodegas.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if request.user.role == 'admin' or request.user.is_superuser %}
+<!-- Modal para crear/editar bodega -->
+<div class="modal fade" id="warehouseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="warehouse-form">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="warehouse-modal-title">Nueva Bodega</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="warehouse-id">
+
+                    <div class="mb-3">
+                        <label for="warehouse-name" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="warehouse-name" required maxlength="100">
+                    </div>
+                    <div class="mb-3">
+                        <label for="warehouse-code" class="form-label">Código</label>
+                        <input type="text" class="form-control" id="warehouse-code" required maxlength="50">
+                    </div>
+                    <div class="mb-3">
+                        <label for="warehouse-location" class="form-label">Ubicación</label>
+                        <input type="text" class="form-control" id="warehouse-location" required maxlength="200">
+                    </div>
+                    <div class="mb-3">
+                        <label for="warehouse-capacity" class="form-label">Capacidad</label>
+                        <input type="number" class="form-control" id="warehouse-capacity" required min="1">
+                    </div>
+                    <div class="mb-3">
+                        <label for="warehouse-status" class="form-label">Estado</label>
+                        <select class="form-select" id="warehouse-status" required>
+                            <option value="active">Activo</option>
+                            <option value="inactive">Inactivo</option>
+                            <option value="maintenance">Mantenimiento</option>
+                        </select>
+                    </div>
+                    <div id="warehouse-form-error" class="alert alert-danger d-none mb-0"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="warehouse-submit-btn">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para asignar/editar stock -->
+<div class="modal fade" id="warehouseStockModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="warehouse-stock-form">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="stock-modal-title">Asignar Stock a Bodega</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="warehouse-stock-id">
+
+                    <div class="mb-3">
+                        <label for="stock-product" class="form-label">Producto</label>
+                        <select class="form-select" id="stock-product" required onchange="onProductSelected()">
+                            <option value="">Seleccionar producto...</option>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Stock Total</label>
+                                <input type="number" class="form-control" id="stock-product-total" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Stock Disponible</label>
+                                <input type="number" class="form-control" id="stock-available" readonly style="background-color: rgba(16,185,129,.15); color: #a7f3d0;">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="stock-warehouse" class="form-label">Bodega</label>
+                        <select class="form-select" id="stock-warehouse" required>
+                            <option value="">Seleccionar bodega...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="stock-quantity" class="form-label">Cantidad</label>
+                        <input type="number" class="form-control" id="stock-quantity" required min="0">
+                    </div>
+                    <div id="warehouse-stock-form-error" class="alert alert-danger d-none mb-0"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="stock-submit-btn">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para eliminar bodega -->
+<div class="modal fade" id="deleteWarehouseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Eliminar Bodega</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">¿Seguro que quieres eliminar la bodega <strong id="delete-warehouse-name"></strong>?</p>
+                <input type="hidden" id="delete-warehouse-id">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirm-delete-warehouse-btn">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para eliminar stock -->
+<div class="modal fade" id="deleteStockModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Eliminar Asignación de Stock</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">¿Seguro que quieres eliminar la asignación de stock <strong id="delete-stock-name"></strong>?</p>
+                <input type="hidden" id="delete-stock-id">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirm-delete-stock-btn">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const isAdmin = "{{ request.user.role }}" === 'admin';
+const isSuperuser = "{{ request.user.is_superuser|yesno:'true,false' }}" === 'true';
+const canManageWarehouses = isAdmin || isSuperuser;
+
+let warehouses = [];
+let warehouseStocks = [];
+let allProducts = [];
+
+let warehouseModal = null;
+let warehouseStockModal = null;
+let deleteWarehouseModal = null;
+let deleteStockModal = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (canManageWarehouses) {
+        warehouseModal = new bootstrap.Modal(document.getElementById('warehouseModal'));
+        warehouseStockModal = new bootstrap.Modal(document.getElementById('warehouseStockModal'));
+        deleteWarehouseModal = new bootstrap.Modal(document.getElementById('deleteWarehouseModal'));
+        deleteStockModal = new bootstrap.Modal(document.getElementById('deleteStockModal'));
+        bindAdminEvents();
+    }
+    loadWarehouses();
+    loadWarehouseStocks();
+    loadProducts();
+});
+
+async function loadWarehouses() {
+    const loading = document.getElementById('warehouses-loading');
+    const errorBox = document.getElementById('warehouses-error');
+
+    try {
+        const data = await InventoryApp.fetchAPI('warehouses/');
+        warehouses = InventoryApp.getListData(data);
+        errorBox.style.display = 'none';
+        renderWarehouses();
+        populateWarehouseSelect();
+    } catch (error) {
+        loading.style.display = 'none';
+        errorBox.textContent = error.message;
+        errorBox.style.display = 'block';
+        document.getElementById('warehouses-empty').style.display = 'block';
+    }
+}
+
+async function loadWarehouseStocks() {
+    const loading = document.getElementById('stocks-loading');
+    const errorBox = document.getElementById('stocks-error');
+
+    try {
+        const data = await InventoryApp.fetchAPI('warehouse-stocks/');
+        warehouseStocks = InventoryApp.getListData(data);
+        errorBox.style.display = 'none';
+        renderWarehouseStocks();
+    } catch (error) {
+        loading.style.display = 'none';
+        errorBox.textContent = error.message;
+        errorBox.style.display = 'block';
+        document.getElementById('stocks-empty').style.display = 'block';
+    }
+}
+
+async function loadProducts() {
+    try {
+        const data = await InventoryApp.fetchAPI('products/');
+        allProducts = InventoryApp.getListData(data);
+        populateProductSelect();
+    } catch (error) {
+        console.error('Error cargando productos:', error);
+    }
+}
+
+function populateProductSelect() {
+    const select = document.getElementById('stock-product');
+    select.innerHTML = '<option value="">Seleccionar producto...</option>';
+    allProducts.forEach(product => {
+        const option = document.createElement('option');
+        option.value = product.id;
+        option.textContent = `${product.name} (${product.sku})`;
+        select.appendChild(option);
+    });
+}
+
+function populateWarehouseSelect() {
+    const select = document.getElementById('stock-warehouse');
+    select.innerHTML = '<option value="">Seleccionar bodega...</option>';
+    warehouses.forEach(warehouse => {
+        const option = document.createElement('option');
+        option.value = warehouse.id;
+        option.textContent = `${warehouse.name} (${warehouse.code})`;
+        select.appendChild(option);
+    });
+}
+
+function renderWarehouses() {
+    const tbody = document.getElementById('warehouses-table-body');
+    const container = document.getElementById('warehouses-container');
+    const loading = document.getElementById('warehouses-loading');
+    const empty = document.getElementById('warehouses-empty');
+
+    tbody.innerHTML = '';
+    loading.style.display = 'none';
+
+    if (!warehouses.length) {
+        container.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+    }
+
+    empty.style.display = 'none';
+    container.style.display = 'block';
+
+    warehouses.forEach((warehouse) => {
+        const row = tbody.insertRow();
+        const statusBadge = {
+            'active': '<span class="badge bg-success">Activo</span>',
+            'inactive': '<span class="badge bg-secondary">Inactivo</span>',
+            'maintenance': '<span class="badge bg-warning">Mantenimiento</span>'
+        }[warehouse.status] || warehouse.status;
+
+        const actions = canManageWarehouses
+            ? `<div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="openEditWarehouse(${warehouse.id})">Editar</button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="openDeleteWarehouse(${warehouse.id})">Eliminar</button>
+               </div>`
+            : '';
+
+        row.innerHTML = `
+            <td><code>${escapeHtml(warehouse.code)}</code></td>
+            <td><strong>${escapeHtml(warehouse.name)}</strong></td>
+            <td>${escapeHtml(warehouse.location)}</td>
+            <td><strong>${warehouse.capacity}</strong></td>
+            <td>${statusBadge}</td>
+            <td>${actions}</td>
+        `;
+    });
+}
+
+function renderWarehouseStocks() {
+    const tbody = document.getElementById('stocks-table-body');
+    const container = document.getElementById('stocks-container');
+    const loading = document.getElementById('stocks-loading');
+    const empty = document.getElementById('stocks-empty');
+
+    tbody.innerHTML = '';
+    loading.style.display = 'none';
+
+    if (!warehouseStocks.length) {
+        container.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+    }
+
+    empty.style.display = 'none';
+    container.style.display = 'block';
+
+    warehouseStocks.forEach((stock) => {
+        const row = tbody.insertRow();
+        const updatedDate = new Date(stock.updated_at).toLocaleDateString('es-CO');
+        
+        const actions = canManageWarehouses
+            ? `<div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="openEditStock(${stock.id})">Editar</button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="openDeleteStock(${stock.id})">Eliminar</button>
+               </div>`
+            : '';
+
+        row.innerHTML = `
+            <td><strong>${escapeHtml(stock.product_name)}</strong></td>
+            <td><code>${escapeHtml(stock.product_sku)}</code></td>
+            <td>${escapeHtml(stock.warehouse_name)} <small class="text-muted">${escapeHtml(stock.warehouse_code)}</small></td>
+            <td><strong>${stock.stock}</strong></td>
+            <td><small>${updatedDate}</small></td>
+            <td>${actions}</td>
+        `;
+    });
+}
+
+function bindAdminEvents() {
+    document.getElementById('new-warehouse-btn').addEventListener('click', openCreateWarehouse);
+    document.getElementById('add-stock-btn').addEventListener('click', openCreateStock);
+    document.getElementById('warehouse-form').addEventListener('submit', submitWarehouseForm);
+    document.getElementById('warehouse-stock-form').addEventListener('submit', submitWarehouseStockForm);
+    document.getElementById('confirm-delete-warehouse-btn').addEventListener('click', deleteWarehouse);
+    document.getElementById('confirm-delete-stock-btn').addEventListener('click', deleteWarehouseStock);
+}
+
+function openCreateWarehouse() {
+    document.getElementById('warehouse-modal-title').textContent = 'Nueva Bodega';
+    document.getElementById('warehouse-submit-btn').textContent = 'Guardar';
+    document.getElementById('warehouse-id').value = '';
+    document.getElementById('warehouse-form').reset();
+    document.getElementById('warehouse-status').value = 'active';
+    hideWarehouseFormError();
+}
+
+function openEditWarehouse(id) {
+    const warehouse = warehouses.find((w) => w.id === id);
+    if (!warehouse) {
+        InventoryApp.showAlert('Bodega no encontrada.', 'warning');
+        return;
+    }
+
+    document.getElementById('warehouse-modal-title').textContent = 'Editar Bodega';
+    document.getElementById('warehouse-submit-btn').textContent = 'Actualizar';
+    document.getElementById('warehouse-id').value = warehouse.id;
+    document.getElementById('warehouse-name').value = warehouse.name || '';
+    document.getElementById('warehouse-code').value = warehouse.code || '';
+    document.getElementById('warehouse-location').value = warehouse.location || '';
+    document.getElementById('warehouse-capacity').value = warehouse.capacity || '';
+    document.getElementById('warehouse-status').value = warehouse.status || 'active';
+    hideWarehouseFormError();
+
+    warehouseModal.show();
+}
+
+function openDeleteWarehouse(id) {
+    const warehouse = warehouses.find((w) => w.id === id);
+    if (!warehouse) {
+        InventoryApp.showAlert('Bodega no encontrada.', 'warning');
+        return;
+    }
+
+    document.getElementById('delete-warehouse-id').value = warehouse.id;
+    document.getElementById('delete-warehouse-name').textContent = warehouse.name;
+    deleteWarehouseModal.show();
+}
+
+function openCreateStock() {
+    document.getElementById('stock-modal-title').textContent = 'Asignar Stock a Bodega';
+    document.getElementById('stock-submit-btn').textContent = 'Guardar';
+    document.getElementById('warehouse-stock-id').value = '';
+    document.getElementById('warehouse-stock-form').reset();
+    document.getElementById('stock-product-total').value = '';
+    document.getElementById('stock-available').value = '';
+    hideStockFormError();
+    warehouseStockModal.show();
+}
+
+function onProductSelected() {
+    const productId = parseInt(document.getElementById('stock-product').value);
+    if (!productId) {
+        document.getElementById('stock-product-total').value = '';
+        document.getElementById('stock-available').value = '';
+        return;
+    }
+
+    const product = allProducts.find(p => p.id === productId);
+    if (!product) {
+        document.getElementById('stock-product-total').value = '';
+        document.getElementById('stock-available').value = '';
+        return;
+    }
+
+    // Mostrar stock total
+    document.getElementById('stock-product-total').value = product.stock;
+
+    // Calcular stock ya asignado en otras bodegas
+    const alreadyAssigned = warehouseStocks
+        .filter(s => s.product === productId)
+        .reduce((sum, s) => sum + s.stock, 0);
+
+    const available = product.stock - alreadyAssigned;
+    document.getElementById('stock-available').value = available;
+}
+
+function openEditStock(id) {
+    const stock = warehouseStocks.find((s) => s.id === id);
+    if (!stock) {
+        InventoryApp.showAlert('Stock no encontrado.', 'warning');
+        return;
+    }
+
+    document.getElementById('stock-modal-title').textContent = 'Editar Stock';
+    document.getElementById('stock-submit-btn').textContent = 'Actualizar';
+    document.getElementById('warehouse-stock-id').value = stock.id;
+    document.getElementById('stock-product').value = stock.product;
+    document.getElementById('stock-warehouse').value = stock.warehouse;
+    document.getElementById('stock-quantity').value = stock.stock;
+    
+    // Mostrar info del producto
+    const product = allProducts.find(p => p.id === stock.product);
+    if (product) {
+        document.getElementById('stock-product-total').value = stock.product_total_stock;
+        // Calcular disponible excluyendo el actual
+        const alreadyAssigned = warehouseStocks
+            .filter(s => s.product === stock.product && s.id !== stock.id)
+            .reduce((sum, s) => sum + s.stock, 0);
+        const available = stock.product_total_stock - alreadyAssigned;
+        document.getElementById('stock-available').value = available;
+    }
+    
+    hideStockFormError();
+    warehouseStockModal.show();
+}
+
+function openDeleteStock(id) {
+    const stock = warehouseStocks.find((s) => s.id === id);
+    if (!stock) {
+        InventoryApp.showAlert('Stock no encontrado.', 'warning');
+        return;
+    }
+
+    document.getElementById('delete-stock-id').value = stock.id;
+    document.getElementById('delete-stock-name').textContent = `${stock.product_name} en ${stock.warehouse_name}`;
+    deleteStockModal.show();
+}
+
+async function submitWarehouseForm(event) {
+    event.preventDefault();
+
+    const submitBtn = document.getElementById('warehouse-submit-btn');
+    const warehouseId = document.getElementById('warehouse-id').value;
+
+    const payload = {
+        name: document.getElementById('warehouse-name').value.trim(),
+        code: document.getElementById('warehouse-code').value.trim(),
+        location: document.getElementById('warehouse-location').value.trim(),
+        capacity: parseInt(document.getElementById('warehouse-capacity').value),
+        status: document.getElementById('warehouse-status').value
+    };
+
+    submitBtn.disabled = true;
+    hideWarehouseFormError();
+
+    try {
+        if (warehouseId) {
+            await InventoryApp.fetchAPI(`warehouses/${warehouseId}/`, {
+                method: 'PATCH',
+                body: JSON.stringify(payload)
+            });
+        } else {
+            await InventoryApp.fetchAPI('warehouses/', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+        }
+        warehouseModal.hide();
+        loadWarehouses();
+        InventoryApp.showAlert(warehouseId ? 'Bodega actualizada.' : 'Bodega creada.', 'success');
+    } catch (error) {
+        showWarehouseFormError(error.message);
+    } finally {
+        submitBtn.disabled = false;
+    }
+}
+
+async function submitWarehouseStockForm(event) {
+    event.preventDefault();
+
+    const submitBtn = document.getElementById('stock-submit-btn');
+    const stockId = document.getElementById('warehouse-stock-id').value;
+    const requestedStock = parseInt(document.getElementById('stock-quantity').value);
+    const available = parseInt(document.getElementById('stock-available').value) || 0;
+
+    // Validación del lado del cliente
+    if (requestedStock > available) {
+        showStockFormError(`Stock solicitado (${requestedStock}) no puede exceder el disponible (${available}).`);
+        return;
+    }
+
+    const payload = {
+        product: parseInt(document.getElementById('stock-product').value),
+        warehouse: parseInt(document.getElementById('stock-warehouse').value),
+        stock: requestedStock
+    };
+
+    submitBtn.disabled = true;
+    hideStockFormError();
+
+    try {
+        if (stockId) {
+            await InventoryApp.fetchAPI(`warehouse-stocks/${stockId}/`, {
+                method: 'PATCH',
+                body: JSON.stringify(payload)
+            });
+        } else {
+            await InventoryApp.fetchAPI('warehouse-stocks/', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+        }
+        warehouseStockModal.hide();
+        loadWarehouseStocks();
+        InventoryApp.showAlert(stockId ? 'Stock actualizado.' : 'Stock asignado.', 'success');
+    } catch (error) {
+        showStockFormError(error.message);
+    } finally {
+        submitBtn.disabled = false;
+    }
+}
+
+async function deleteWarehouse() {
+    const warehouseId = document.getElementById('delete-warehouse-id').value;
+    const btn = document.getElementById('confirm-delete-warehouse-btn');
+    btn.disabled = true;
+
+    try {
+        await InventoryApp.fetchAPI(`warehouses/${warehouseId}/`, { method: 'DELETE' });
+        deleteWarehouseModal.hide();
+        loadWarehouses();
+        InventoryApp.showAlert('Bodega eliminada.', 'success');
+    } catch (error) {
+        InventoryApp.showAlert('Error al eliminar: ' + error.message, 'danger');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function deleteWarehouseStock() {
+    const stockId = document.getElementById('delete-stock-id').value;
+    const btn = document.getElementById('confirm-delete-stock-btn');
+    btn.disabled = true;
+
+    try {
+        await InventoryApp.fetchAPI(`warehouse-stocks/${stockId}/`, { method: 'DELETE' });
+        deleteStockModal.hide();
+        loadWarehouseStocks();
+        InventoryApp.showAlert('Stock eliminado.', 'success');
+    } catch (error) {
+        InventoryApp.showAlert('Error al eliminar: ' + error.message, 'danger');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function hideWarehouseFormError() {
+    document.getElementById('warehouse-form-error').classList.add('d-none');
+    document.getElementById('warehouse-form-error').textContent = '';
+}
+
+function showWarehouseFormError(message) {
+    document.getElementById('warehouse-form-error').classList.remove('d-none');
+    document.getElementById('warehouse-form-error').textContent = message;
+}
+
+function hideStockFormError() {
+    document.getElementById('warehouse-stock-form-error').classList.add('d-none');
+    document.getElementById('warehouse-stock-form-error').textContent = '';
+}
+
+function showStockFormError(message) {
+    document.getElementById('warehouse-stock-form-error').classList.remove('d-none');
+    document.getElementById('warehouse-stock-form-error').textContent = message;
+}
+
+function escapeHtml(value) {
+    const text = value == null ? '' : String(value);
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+</script>
+{% endblock %}

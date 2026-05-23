@@ -1,0 +1,364 @@
+{% extends 'inventory_app/base.html' %}
+
+{% block title %}Reportes - Inventario{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Reportes de Inventario</h2>
+</div>
+
+<!-- Tabs de reportes -->
+<ul class="nav nav-tabs mb-4" id="reportTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="valuation-tab" data-bs-toggle="tab" data-bs-target="#valuation" type="button" role="tab">
+            Valorización del Inventario
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="movements-tab" data-bs-toggle="tab" data-bs-target="#movements" type="button" role="tab">
+            Movimientos por Período
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="rotation-tab" data-bs-toggle="tab" data-bs-target="#rotation" type="button" role="tab">
+            Ranking de Rotación
+        </button>
+    </li>
+</ul>
+
+<!-- Contenido de tabs -->
+<div class="tab-content" id="reportTabContent">
+    
+    <!-- Reporte 1: Valorización -->
+    <div class="tab-pane fade show active" id="valuation" role="tabpanel">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Valorización Total del Inventario</h5>
+                <button class="btn btn-sm btn-primary" onclick="loadValuationReport()">Actualizar</button>
+            </div>
+            <div class="card-body">
+                <div id="valuation-loading" class="p-4">Cargando reporte...</div>
+                <div id="valuation-error" class="alert alert-danger" style="display: none;"></div>
+                
+                <!-- Resumen -->
+                <div id="valuation-summary" style="display: none;">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="car">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title">Valor Total del Inventario</h6>
+                                    <h2 id="total-value" class="text-primary">$0.00</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title">Cantidad de Productos</h6>
+                                    <h2 id="product-count" class="text-success">0</h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de productos -->
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>SKU</th>
+                                    <th>Stock</th>
+                                    <th>Precio Costo</th>
+                                    <th>Valorización</th>
+                                </tr>
+                            </thead>
+                            <tbody id="valuation-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reporte 2: Movimientos por Período -->
+    <div class="tab-pane fade" id="movements" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-3">Movimientos por Período</h5>
+                <div class="row">
+                    <div class="col-md-3">
+                        <label for="movements-start-date" class="form-label">Fecha Inicio</label>
+                        <input type="date" class="form-control" id="movements-start-date">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="movements-end-date" class="form-label">Fecha Fin</label>
+                        <input type="date" class="form-control" id="movements-end-date">
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <button class="btn btn-primary" onclick="loadMovementsReport()">Filtrar Reporte</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="movements-loading" class="p-4" style="display: none;">Cargando reporte...</div>
+                <div id="movements-error" class="alert alert-danger" style="display: none;"></div>
+
+                <!-- Resumen por tipo -->
+                <div id="movements-summary" style="display: none;">
+                    <div class="row mb-4" id="movement-types-summary"></div>
+
+                    <!-- Tabla de movimientos -->
+                    <div class="mt-4">
+                        <h6>Detalle de Movimientos</h6>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Producto</th>
+                                        <th>Tipo</th>
+                                        <th>Cantidad</th>
+                                        <th>Usuario</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="movements-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reporte 3: Ranking de Rotación -->
+    <div class="tab-pane fade" id="rotation" role="tabpanel">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Ranking de Productos con Mayor Rotación</h5>
+                <button class="btn btn-sm btn-primary" onclick="loadRotationReport()">Actualizar</button>
+            </div>
+            <div class="card-body">
+                <div id="rotation-loading" class="p-4">Cargando reporte...</div>
+                <div id="rotation-error" class="alert alert-danger" style="display: none;"></div>
+
+                <div id="rotation-summary" style="display: none;">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Producto</th>
+                                    <th>SKU</th>
+                                    <th>Categoría</th>
+                                    <th>Stock Actual</th>
+                                    <th>Movimientos</th>
+                                    <th>Cantidad Movida</th>
+                                    <th>Tasa de Rotación</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rotation-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Establecer fechas por defecto
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
+    document.getElementById('movements-end-date').valueAsDate = today;
+    document.getElementById('movements-start-date').valueAsDate = thirtyDaysAgo;
+    
+    // Cargar reportes iniciales
+    loadValuationReport();
+    loadMovementsReport();
+    loadRotationReport();
+});
+
+// Reporte 1: Valorización del Inventario
+async function loadValuationReport() {
+    const loading = document.getElementById('valuation-loading');
+    const error = document.getElementById('valuation-error');
+    const summary = document.getElementById('valuation-summary');
+    
+    loading.style.display = 'block';
+    error.style.display = 'none';
+    summary.style.display = 'none';
+    
+    try {
+        const response = await InventoryApp.fetchAPI('reports/valuation/');
+        
+        const totalValue = response.total_inventory_value || 0;
+        const productCount = response.product_count || 0;
+        const products = response.products || [];
+        
+        // Actualizar totales
+        document.getElementById('total-value').textContent = 
+            '$' + totalValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('product-count').textContent = productCount;
+        
+        // Llenar tabla
+        const tbody = document.getElementById('valuation-table-body');
+        tbody.innerHTML = '';
+        
+        products.forEach(product => {
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td>${escapeHtml(product.name)}</td>
+                <td>${escapeHtml(product.sku)}</td>
+                <td>${product.stock}</td>
+                <td>$${parseFloat(product.cost_price).toFixed(2)}</td>
+                <td class="text-success"><strong>$${parseFloat(product.valuation).toFixed(2)}</strong></td>
+            `;
+        });
+        
+        summary.style.display = 'block';
+        
+    } catch (err) {
+        error.textContent = err.message;
+        error.style.display = 'block';
+    } finally {
+        loading.style.display = 'none';
+    }
+}
+
+// Reporte 2: Movimientos por Período
+async function loadMovementsReport() {
+    const loading = document.getElementById('movements-loading');
+    const error = document.getElementById('movements-error');
+    const summary = document.getElementById('movements-summary');
+    
+    loading.style.display = 'block';
+    error.style.display = 'none';
+    summary.style.display = 'none';
+    
+    try {
+        const startDate = document.getElementById('movements-start-date').value;
+        const endDate = document.getElementById('movements-end-date').value;
+        
+        const url = `reports/movements/?start_date=${startDate}&end_date=${endDate}`;
+        const response = await InventoryApp.fetchAPI(url);
+        
+        const movementSummary = response.movement_summary || {};
+        const movements = response.movements || [];
+        
+        // Crear tarjetas de resumen por tipo
+        const summaryDiv = document.getElementById('movement-types-summary');
+        summaryDiv.innerHTML = '';
+        
+        const movementLabels = {
+            'purchase': 'Compras',
+            'return': 'Devoluciones',
+            'sale': 'Ventas',
+            'adjustment': 'Ajustes',
+            'disposal': 'Descartes'
+        };
+        
+        Object.entries(movementSummary).forEach(([type, data]) => {
+            const col = document.createElement('div');
+            col.className = 'col-md-4 mb-3';
+            col.innerHTML = `
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">${movementLabels[type]}</h6>
+                        <div class="d-flex justify-content-between">
+                            <span>Cantidad: <strong>${data.count}</strong></span>
+                            <span>Unidades: <strong>${data.total_quantity}</strong></span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            summaryDiv.appendChild(col);
+        });
+        
+        // Llenar tabla de movimientos
+        const tbody = document.getElementById('movements-table-body');
+        tbody.innerHTML = '';
+        
+        movements.forEach(movement => {
+            const row = tbody.insertRow();
+            const date = new Date(movement.timestamp).toLocaleString();
+            row.innerHTML = `
+                <td>${date}</td>
+                <td>${escapeHtml(movement.product_name)}</td>
+                <td>${escapeHtml(movement.movement_type)}</td>
+                <td>${movement.quantity}</td>
+                <td>${escapeHtml(movement.user)}</td>
+            `;
+        });
+        
+        summary.style.display = 'block';
+        
+    } catch (err) {
+        error.textContent = err.message;
+        error.style.display = 'block';
+    } finally {
+        loading.style.display = 'none';
+    }
+}
+
+// Reporte 3: Ranking de Rotación
+async function loadRotationReport() {
+    const loading = document.getElementById('rotation-loading');
+    const error = document.getElementById('rotation-error');
+    const summary = document.getElementById('rotation-summary');
+    
+    loading.style.display = 'block';
+    error.style.display = 'none';
+    summary.style.display = 'none';
+    
+    try {
+        const response = await InventoryApp.fetchAPI('reports/rotation/?limit=15');
+        
+        const products = response.top_products || [];
+        
+        // Llenar tabla
+        const tbody = document.getElementById('rotation-table-body');
+        tbody.innerHTML = '';
+        
+        products.forEach(product => {
+            const row = tbody.insertRow();
+            const rotationClass = product.rotation_percentage > 100 ? 'text-danger' : 'text-warning';
+            row.innerHTML = `
+                <td><strong>${product.rank}</strong></td>
+                <td>${escapeHtml(product.name)}</td>
+                <td>${escapeHtml(product.sku)}</td>
+                <td>${escapeHtml(product.category)}</td>
+                <td>${product.current_stock}</td>
+                <td><strong>${product.movement_count}</strong></td>
+                <td>${product.total_quantity_moved}</td>
+                <td class="${rotationClass}"><strong>${product.rotation_percentage.toFixed(1)}%</strong></td>
+            `;
+        });
+        
+        summary.style.display = 'block';
+        
+    } catch (err) {
+        error.textContent = err.message;
+        error.style.display = 'block';
+    } finally {
+        loading.style.display = 'none';
+    }
+}
+
+function escapeHtml(value) {
+    const text = value == null ? '' : String(value);
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+</script>
+{% endblock %}
