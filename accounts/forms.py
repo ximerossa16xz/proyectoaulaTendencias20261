@@ -6,7 +6,8 @@ from .models import User
 
 class RegistrationForm(UserCreationForm):
     email = forms.EmailField(required=True)
+    role = forms.ChoiceField(choices=User.ROLE_CHOICES, initial='operador')
 
     class Meta:
         model = User
-        fields = ("username", "email")
+        fields = ("username", "email", "role")

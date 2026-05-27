@@ -30,8 +30,8 @@ def register_view(request):
         form = RegistrationForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
-            user.role = 'admin'
-            user.is_staff = True
+            user.role = form.cleaned_data['role']
+            user.is_staff = user.role == 'admin'
             user.save()
             auth_login(request, user)
 

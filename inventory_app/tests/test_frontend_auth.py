@@ -31,6 +31,8 @@ class FrontendAuthenticationTests(TestCase):
         self.assertContains(response, "Crear cuenta")
         self.assertContains(response, 'placeholder="Usuario"')
         self.assertContains(response, 'placeholder="Correo electrónico"')
+        self.assertContains(response, "Administrador de inventario")
+        self.assertContains(response, "Operador")
         self.assertContains(response, 'placeholder="Contraseña"')
         self.assertContains(response, 'placeholder="Confirmar contraseña"')
 
@@ -43,6 +45,7 @@ class FrontendAuthenticationTests(TestCase):
             {
                 "username": username,
                 "email": "newadmin@example.com",
+                "role": "admin",
                 "password1": password,
                 "password2": password,
             },
@@ -56,6 +59,27 @@ class FrontendAuthenticationTests(TestCase):
 
         dashboard_response = self.client.get(reverse("dashboard"))
         self.assertEqual(dashboard_response.status_code, 200)
+
+    def test_register_post_can_create_operador_user_without_staff(self):
+        username = "newoperator"
+        password = "SecurePass123!"
+
+        response = self.client.post(
+            reverse("register"),
+            {
+                "username": username,
+                "email": "newoperator@example.com",
+                "role": "operador",
+                "password1": password,
+                "password2": password,
+            },
+        )
+
+        self.assertRedirects(response, reverse("dashboard"))
+
+        user = get_user_model().objects.get(username=username)
+        self.assertEqual(user.role, "operador")
+        self.assertFalse(user.is_staff)
 
     def test_register_post_rejects_password_mismatch(self):
         response = self.client.post(
