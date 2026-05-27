@@ -4,9 +4,13 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.authtoken.models import Token
-from django.contrib.auth import authenticate, logout
+from django.contrib.auth import authenticate, logout, login as auth_login
 from django.http import HttpResponseRedirect
+from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
+
+from .forms import RegistrationForm
 from .models import User
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
@@ -16,6 +20,33 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+def register_view(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        form = RegistrationForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.role = 'admin'
+            user.is_staff = True
+            user.save()
+            auth_login(request, user)
+
+            next_url = request.POST.get('next') or reverse('dashboard')
+            if not url_has_allowed_host_and_scheme(
+                next_url,
+                allowed_hosts={request.get_host()},
+                require_https=request.is_secure(),
+            ):
+                next_url = reverse('dashboard')
+            return redirect(next_url)
+    else:
+        form = RegistrationForm()
+
+    return render(request, 'inventory_app/register.html', {'form': form})
 
 @api_view(['POST'])
 @permission_classes([AllowAny])

@@ -23,6 +23,56 @@ class FrontendAuthenticationTests(TestCase):
             reverse("alerts"),
         ]
 
+    def test_register_page_renders_public_template_and_fields(self):
+        response = self.client.get(reverse("register"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "inventory_app/register.html")
+        self.assertContains(response, "Crear cuenta")
+        self.assertContains(response, 'placeholder="Usuario"')
+        self.assertContains(response, 'placeholder="Correo electrónico"')
+        self.assertContains(response, 'placeholder="Contraseña"')
+        self.assertContains(response, 'placeholder="Confirmar contraseña"')
+
+    def test_register_post_creates_admin_user_and_logs_in(self):
+        username = "newadmin"
+        password = "SecurePass123!"
+
+        response = self.client.post(
+            reverse("register"),
+            {
+                "username": username,
+                "email": "newadmin@example.com",
+                "password1": password,
+                "password2": password,
+            },
+        )
+
+        self.assertRedirects(response, reverse("dashboard"))
+
+        user = get_user_model().objects.get(username=username)
+        self.assertEqual(user.role, "admin")
+        self.assertTrue(user.is_staff)
+
+        dashboard_response = self.client.get(reverse("dashboard"))
+        self.assertEqual(dashboard_response.status_code, 200)
+
+    def test_register_post_rejects_password_mismatch(self):
+        response = self.client.post(
+            reverse("register"),
+            {
+                "username": "invalidadmin",
+                "email": "invalidadmin@example.com",
+                "password1": "SecurePass123!",
+                "password2": "DifferentPass123!",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "inventory_app/register.html")
+        self.assertContains(response, "The two password fields didn’t match.")
+        self.assertFalse(get_user_model().objects.filter(username="invalidadmin").exists())
+
     def test_protected_pages_redirect_anonymous_user_to_login(self):
         for url in self.protected_urls:
             with self.subTest(url=url):

@@ -59,6 +59,15 @@
         {% endif %}
 
         <button class="btn btn-login w-100">Ingresar</button>
+
+        <div class="text-center mt-3">
+          <a
+            href="{% url 'register' %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}"
+            class="link-light text-decoration-none"
+          >
+            Crear cuenta nueva
+          </a>
+        </div>
       </form>
     </div>
   </body>

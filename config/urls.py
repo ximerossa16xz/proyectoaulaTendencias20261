@@ -2,10 +2,13 @@ from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
 
+from accounts.views import register_view
+
 urlpatterns = [
     path('admin/', admin.site.urls),
 
     path('', include('inventory_app.urls')),
+    path('register/', register_view, name='register'),
     path('login/', auth_views.LoginView.as_view(
         template_name='inventory_app/login.html'
     ), name='login'),
